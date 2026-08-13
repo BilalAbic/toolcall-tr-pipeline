@@ -11,8 +11,11 @@ içermez. Kaynak snapshotları `sources/`, türetilmiş JSONL ve pilot kanıtlar
 
 - Her kaynak değişmeden okunmuş, pilot yayınından hemen önce yeniden hash'lenmiştir.
 - Pilot zinciri: snapshot → strict ingest → canonicalize/karantina → exact audit.
-- Kayıt onarımı, insan adjudication, source-evidence promotion, S400 seçimi,
-  gerçek kaynak provider egress'i ve Gold/release yapılmamıştır.
+- Pilot koşularında kayıt onarımı, insan adjudication, source-evidence promotion,
+  S400 seçimi, provider egress'i ve Gold/release yapılmamıştır. Pilotlardan
+  sonra yalnız source-explicit, policy-covered ve conflict-free 3 episode / 20
+  leaf pre-review canary'e explicit provider egress'i yapılmıştır; bu canary
+  hiçbir pilot sonucunu, kararını veya üyeliğini değiştirmez.
 - `blocked` sonucu bir hata gizlemez: aşağıdaki karantina veya conflict kanıtı
   çözülmeden sonraki kapı açılmaz.
 - Bu kanıtlar 2026-08-13'te `review prepare` ile karar üretmeden sıralı yerel

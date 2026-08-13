@@ -13,8 +13,8 @@ Faz 1–5 veri hattı, fail-closed canlı çeviri ve judge operasyon yüzeyleri 
 | Kaynak pilotları | When2Call ve xLAM 60k revision-pinned, modelsiz işlendi. |
 | Policy coverage | 85.111 canonical episode, 849.064 çeviri segmenti, 0 unresolved policy error. |
 | İnsan review kuyruğu | 2.983 açık görev yayımlandı: 2.841 canonical karantina ve 142 unresolved conflict. |
-| Canlı provider | DeepSeek çeviri ve OpenAI judge yalnız sentetik smoke girdileriyle doğrulandı. |
-| Gerçek kaynak egress / Gold | İnsan review, adjudication ve selection tamamlanana kadar kapalı. |
+| Pre-review canlı canary | When2Call'dan 3 conflict-free episode / 20 leaf çevrildi; mini judge 20/20 `pass`, 0 finding. |
+| İnsan review / Gold | Model ve deterministik kontrollerden sonra son kabul kapısı; pre-review canary Gold/S400/release üretmez. |
 
 ## Tasarım referansları
 
@@ -79,15 +79,16 @@ Tek mantıksal veri formatında, her satırı tek bir hedef assistant kararında
 - immutable altı-katmanlı prompt bundle ve kayıtlı JSON yanıtla test edilen, ağsız fake-provider sınırı,
 - yalnız exact/full-context eşleşen human-promoted segment memory ve deterministic terminology-risk/research metadata; fuzzy lookup veya fetch yok,
 - DeepSeek V4 Chat Completions çevirici ve OpenAI Responses judge adapterları: provider-bağımlı wire format, local strict response/sentinel/MQM doğrulaması, exact public endpoint allow-list'i, bounded HTTPS/no-redirect transport ve secret-safe credential resolver,
-- canlı preflight: payloaddaki secret, PII ve local-path bulgularında transport öncesi ret; yalnız fixed synthetic smoke için explicit `--live --send` yürütmesi,
+- canlı preflight: payloaddaki secret, PII ve local-path bulgularında transport öncesi ret; sabit synthetic smoke ve küçük, conflict-free pre-review canary için explicit `--live` yürütmesi,
 - explicit `pilot run`: kaynakla kesişmeyen output altında snapshot/ingest/canonical/audit; quarantine veya çözülmemiş conflict olduğunda fail-closed,
 - canonical karantina ve exact-conflict kanıtını sıralı, karar üretmeyen insan review görevlerine dönüştüren `review prepare`; reviewer-authored tek-kayıt JSONL kararını doğrulayan append-only review komutları; Gold release için model verdict + insan kabul bağlantısı zorunlu,
 - hash-only provider attempt kayıtları: ham request/response/credential tutulmaz; otomatik retry bütçesi `0`, geçici hata yalnız manual-retry adayıdır,
+- explicit pre-review canary: source-explicit, policy-covered, conflict-free ve exact-alias dışı en çok 30 episode seçimi; immutable çeviri/judge inputları, otomatik retry, Gold/S400/release veya insan kararı yok,
 - explicit canlı çeviri: policy-izinli leaf başına immutable claim/attempt/checkpoint, kaynak rehash ve host-only merge; otomatik retry, Gold ve release yok,
 - explicit canlı judge: tam-leaf content hash'iyle bağlı strict source/target girdileri, immutable result/attempt manifestleri ve `gold_release_allowed=false`,
 - yalnız enjekte edilmiş renderer ve tokenizer ile çalışan render/loss-mask sözleşmesi: pinli render config, tek final-assistant payload aralığı, teknik yapı hash'i ve truncation/uyuşmazlıkta fail-closed; chat-template veya tokenizer indirme yok,
 - yalnız yerel sentetik JSONL için Gold release-manifest sözleşmesi: sıralı dosya byte-hash/row-count kimliği, episode sırası ve açık insan kabul kimliği doğrulaması; Parquet, Dataset Card, Hugging Face veya yayın işlemi yok,
-- `source register`, `source validate`, `source json-array-to-jsonl`, `source evidence`, `ingest`, `registry build`, `canonicalize`, `audit duplicates`, `audit near-duplicates`, `select freeze`, `pilot run`, `translate`, `evaluation run`, `review prepare`, `review submit-evaluation`, `review submit-conflict`, `release build`, `release validate`, `inspect`, `stats`, `events show` ve `diagnostics` CLI komutları.
+- `source register`, `source validate`, `source json-array-to-jsonl`, `source evidence`, `ingest`, `registry build`, `canonicalize`, `audit duplicates`, `audit near-duplicates`, `select freeze`, `pilot run`, `canary prepare`, `canary evaluation-inputs`, `translate`, `evaluation run`, `review prepare`, `review submit-evaluation`, `review submit-conflict`, `release build`, `release validate`, `inspect`, `stats`, `events show` ve `diagnostics` CLI komutları.
 
 Gerçek eval UI, render ve yayın komutları hâlâ kapalıdır. Review/release komutları yalnız dışarıdan sağlanan insan kararlarını doğrular; karar üretmez. Canlı çeviri/judge çağrıları yalnız explicit `--live`, non-default config, ayrı output kökü ve preflight ile gerçekleşir; kaynak dataset asla varsayılan olarak gönderilmez.
 
@@ -119,7 +120,9 @@ Pilot geçmeden çeviri veya Gold release açılmaz. Human-review ve release kom
 
 Kullanıcının Hugging Face gated erişimiyle [Salesforce xLAM 60k](https://huggingface.co/datasets/Salesforce/xlam-function-calling-60k) train kaynağı revision `26d14ebfe18b1f7b524bd39b404b50af5dc97866` ile indirildi. 96.1 MB JSON dizi, tam dosya hash'i bağlı immutable JSONL'ye dönüştürüldü ve tamamı modelsiz pilotta işlendi: 60.000 source-valid satırdan 57.718 canonical kayıt, 2.282 gerekçeli karantina ve insan review bekleyen 6 hard-conflict adayı oluştu. Kaynak veya karantina kayıtları düzeltilmedi; gerçek kaynak içeriği provider'a gönderilmedi.
 
-Gözden geçirilmiş field policy, When2Call+xLAM toplam 85.111 canonical episode üzerinde ağsız doğrulandı: 849.064 çevrilebilir segment ve 0 çözülmemiş policy hatası. Tool/parameter açıklamaları çevrilebilir; tüm tanımsız argument path'leri `copy_exact` kalır ve modele gönderilmez. İnsan review/selection kapıları geçilmediği için gerçek kaynak egress'i hâlâ kapalıdır.
+Gözden geçirilmiş field policy, When2Call+xLAM toplam 85.111 canonical episode üzerinde ağsız doğrulandı: 849.064 çevrilebilir segment ve 0 çözülmemiş policy hatası. Tool/parameter açıklamaları çevrilebilir; tüm tanımsız argument path'leri `copy_exact` kalır ve modele gönderilmez. Bu kapsam, yalnız source-explicit ve conflict-free pre-review canary için küçük canlı testlere izin verir; S400, Gold ve release insan kabulundan önce kapalıdır.
+
+`translation-prompt-0.2.0`, modelin kaynak leaf içindeki talimatları veri olarak ele almasını, teknik alanların host-owned kalmasını, sentinel’ların byte-for-byte korunmasını, belirsiz terimde `research_needed` dönmesini ve JSON-only yanıtını açıkça güçlendirir. Bu promptla When2Call pre-review canary’de 3 episode / 20 leaf DeepSeek V4 Flash ile çevrildi; GPT-5.4-mini 20/20 pair için `pass`, 0 finding verdi. Bu model triage kanıtıdır; hiçbir satır `gold_eligible` değildir ve insan incelemesi son kabul kapısıdır.
 
 Bu iki pilotun karar gerektiren kanıtları, hiçbir kaynak satırı veya karar içermeyen tek bir yerel review kuyruğunda yayımlandı: `manifest_a52302ac6fac9d362db23109b2ee20bd762897ad653cf143d2c7b81ba9cc0c8d`. Kuyruk 2.841 canonical-karantina ve 142 conflict-adjudication görevi taşır. Her conflict satırı mevcut `review submit-conflict` akışına, her karantina satırı ise yalnız insan onaylı adapter/policy düzeltmesiyle yeniden pilotlama gerektiren remediation işine bağlanır; otomatik drop veya kabul yoktur.
 

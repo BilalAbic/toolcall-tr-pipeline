@@ -50,6 +50,11 @@ from toolcall_tr.pilot import (
     PilotConfigurationError,
     run_operational_pilot,
 )
+from toolcall_tr.pre_review_canary import (
+    PreReviewCanaryError,
+    prepare_pre_review_canary,
+    prepare_pre_review_evaluation_inputs,
+)
 from toolcall_tr.prompt_contract import load_prompt_bundle
 from toolcall_tr.provider_adapter import ProviderAdapterError
 from toolcall_tr.provider_provenance import ProviderAttemptSink
@@ -90,6 +95,7 @@ index_app = typer.Typer(help="Derived index commands.")
 provider_app = typer.Typer(help="Safe provider configuration inspection commands.")
 pilot_app = typer.Typer(help="Fail-closed, provider-free operational pilot commands.")
 evaluation_app = typer.Typer(help="Explicit, human-gated live OpenAI evaluation commands.")
+canary_app = typer.Typer(help="Bounded pre-review prompt and provider canary commands.")
 
 app.add_typer(source_app, name="source")
 app.add_typer(registry_app, name="registry")
@@ -103,6 +109,7 @@ app.add_typer(index_app, name="index")
 app.add_typer(provider_app, name="provider")
 app.add_typer(pilot_app, name="pilot")
 app.add_typer(evaluation_app, name="evaluation")
+app.add_typer(canary_app, name="canary")
 console = Console()
 
 _DEFAULT_PIPELINE_CONFIG = Path("configs/pipeline.toml")
@@ -635,6 +642,99 @@ def pilot_run(
         f"[green]pilot passed[/green] id={report.pilot_id} "
         f"canonical={report.canonical_records} "
         f"review_required_conflicts={report.review_required_conflicts}"
+    )
+
+
+@canary_app.command("prepare")
+def canary_prepare(
+    canonical_jsonl: Annotated[list[Path], typer.Argument(exists=True, dir_okay=False)],
+    output: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--output",
+            help="Required disjoint root for immutable canary artifacts.",
+        ),
+    ],
+    conflict_audit_json: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--conflict-audit",
+            exists=True,
+            dir_okay=False,
+            help="Repeatable exact-conflict-audit JSON input.",
+        ),
+    ] = None,
+    field_policy: Annotated[
+        Path,
+        typer.Option("--field-policy", exists=True, dir_okay=False),
+    ] = Path("configs/field_policy.toml"),
+    episodes: Annotated[int, typer.Option("--episodes", min=1, max=30)] = 30,
+    max_segments: Annotated[int, typer.Option("--max-segments", min=1)] = 300,
+) -> None:
+    """Prepare a bounded pre-review cohort; it never creates Gold membership.
+
+    Members must be canonical, source-explicit, policy-covered, conflict-free,
+    and non-alias survivors according to supplied immutable audits. The cohort
+    is suitable for prompt/provider testing only. Human review remains the
+    final acceptance gate for source validity, S400, Gold, and release.
+    """
+    try:
+        manifest = prepare_pre_review_canary(
+            canonical_jsonl,
+            conflict_audit_json or [],
+            output,
+            field_policy=load_field_policy(field_policy),
+            requested_episode_count=episodes,
+            max_translatable_segments=max_segments,
+        )
+    except (PreReviewCanaryError, StrictJsonError, ValidationError, ValueError) as exc:
+        console.print(f"[red]pre-review canary refused:[/red] {type(exc).__name__}")
+        raise typer.Exit(code=2) from exc
+    console.print(
+        "[green]pre-review canary prepared[/green] "
+        f"id={manifest.canary_id} episodes={len(manifest.members)} "
+        f"segments={manifest.total_translatable_segments} "
+        "promotion=not_eligible human_review=final_acceptance"
+    )
+
+
+@canary_app.command("evaluation-inputs")
+def canary_evaluation_inputs(
+    canonical_jsonl: Annotated[Path, typer.Argument(exists=True, dir_okay=False)],
+    translation_results_jsonl: Annotated[Path, typer.Argument(exists=True, dir_okay=False)],
+    output: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--output",
+            help="Required disjoint root for immutable evaluation-input artifacts.",
+        ),
+    ],
+    field_policy: Annotated[
+        Path,
+        typer.Option("--field-policy", exists=True, dir_okay=False),
+    ] = Path("configs/field_policy.toml"),
+) -> None:
+    """Create strict model-evaluation pairs from a translated pre-review canary.
+
+    Both full leaf texts remain only in this local input artifact. Evaluation
+    results remain Gold-ineligible and human review remains the final gate.
+    """
+    try:
+        manifest = prepare_pre_review_evaluation_inputs(
+            canonical_jsonl,
+            translation_results_jsonl,
+            output,
+            field_policy=load_field_policy(field_policy),
+        )
+    except (PreReviewCanaryError, StrictJsonError, ValidationError, ValueError) as exc:
+        console.print(f"[red]pre-review evaluation inputs refused:[/red] {type(exc).__name__}")
+        raise typer.Exit(code=2) from exc
+    console.print(
+        "[green]pre-review evaluation inputs published[/green] "
+        f"manifest={manifest.manifest_id} rows={manifest.artifacts[0].row_count} "
+        "gold_release_allowed=false"
     )
 
 

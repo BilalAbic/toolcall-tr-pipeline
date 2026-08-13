@@ -1,0 +1,143 @@
+{
+  "$defs": {
+    "PreReviewCanaryMember": {
+      "additionalProperties": false,
+      "description": "One technical-test member; it has no quality or human-approval verdict.",
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "input_variant_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Input Variant Id",
+          "type": "string"
+        },
+        "rank": {
+          "exclusiveMinimum": 0,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "rank_key": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Rank Key",
+          "type": "string"
+        },
+        "translatable_segments": {
+          "exclusiveMinimum": 0,
+          "title": "Translatable Segments",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rank",
+        "episode_id",
+        "input_variant_id",
+        "rank_key",
+        "translatable_segments"
+      ],
+      "title": "PreReviewCanaryMember",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Immutable receipt for a provisional, non-promoting provider canary.",
+  "properties": {
+    "audit_ids": {
+      "items": {
+        "pattern": "^audit_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "title": "Audit Ids",
+      "type": "array"
+    },
+    "canary_id": {
+      "pattern": "^canary_[0-9a-f]{64}$",
+      "title": "Canary Id",
+      "type": "string"
+    },
+    "canary_policy_version": {
+      "const": "pre-review-canary-0.1.0",
+      "default": "pre-review-canary-0.1.0",
+      "title": "Canary Policy Version",
+      "type": "string"
+    },
+    "canonical_manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Canonical Manifest Id",
+      "type": "string"
+    },
+    "field_policy_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Field Policy Sha256",
+      "type": "string"
+    },
+    "human_review": {
+      "const": "required_for_final_acceptance",
+      "default": "required_for_final_acceptance",
+      "title": "Human Review",
+      "type": "string"
+    },
+    "input_file_sha256s": {
+      "items": {
+        "pattern": "^sha256:[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Input File Sha256S",
+      "type": "array"
+    },
+    "max_translatable_segments": {
+      "minimum": 1,
+      "title": "Max Translatable Segments",
+      "type": "integer"
+    },
+    "members": {
+      "items": {
+        "$ref": "#/$defs/PreReviewCanaryMember"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Members",
+      "type": "array"
+    },
+    "promotion": {
+      "const": "not_eligible",
+      "default": "not_eligible",
+      "title": "Promotion",
+      "type": "string"
+    },
+    "requested_episode_count": {
+      "maximum": 30,
+      "minimum": 1,
+      "title": "Requested Episode Count",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "pre-review-canary-0.1.0",
+      "default": "pre-review-canary-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "total_translatable_segments": {
+      "exclusiveMinimum": 0,
+      "title": "Total Translatable Segments",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "canary_id",
+    "input_file_sha256s",
+    "audit_ids",
+    "field_policy_sha256",
+    "requested_episode_count",
+    "max_translatable_segments",
+    "members",
+    "total_translatable_segments",
+    "canonical_manifest_id"
+  ],
+  "title": "PreReviewCanaryManifest",
+  "type": "object"
+}

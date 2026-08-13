@@ -13,7 +13,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `secure_transport.py` yalnız public HTTPS, no-proxy/no-redirect, bounded response ve redacted hata yüzeyiyle çalışır. `credentials.py` yalnız allow-list'li provider anahtarını `.env` veya process environment'tan çözer; anahtar loglanmaz.
 - `deepseek_adapter.py` yalnız `https://api.deepseek.com/chat/completions` ve V4 modellerini; `openai_judge.py` yalnız `https://api.openai.com/v1/responses` ile belirtilen judge modellerini kabul eder.
 - `live_preflight.py` secret/PII/local-path/private endpoint bulgularını transport öncesi reddeder. Varsayılan pipeline config yine çevrimdışıdır.
-- Varsayılan configte provider/eval kapalıdır. `translate` ve `evaluation run` yalnız explicit `--live`, non-default config, disjoint output root ve preflight ile çalışır; review/release yalnız haricî insan kararlarını doğrular.
+- Varsayılan configte provider/eval kapalıdır. `translate` ve `evaluation run` yalnız explicit `--live`, non-default config, disjoint output root ve preflight ile çalışır. `canary prepare` yalnız source-explicit, policy-covered, conflict-free/alias-dışı en çok 30 episode için pre-review test cohort'u üretir; review/release son kabulda yalnız haricî insan kararlarını doğrular.
 - Testler `tests/fixtures/` altındaki küçük sentetik JSONL dosyalarını ve pytest geçici dizinlerini kullanır.
 - Gerçek kaynak snapshot/pilot artifactı yalnız yerel ve ignore edilmiş artifact kökü altında üretildi; kaynak değiştirilmedi ve hiçbir gerçek kaynak satırı modele gönderilmedi. Gerçek insan kararı, S30/S400 seçimi veya release artifactı üretilmemiştir.
 
@@ -23,7 +23,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 |---|---|---|---|
 | Proje iskeleti ve kilitli ortam | Uygulandı | `pyproject.toml`, `uv.lock`, `src/toolcall_tr/`, `tests/` | Python 3.12, `uv`, pytest/Hypothesis, Ruff ve Pyright yapılandırması |
 | Strict sözleşmeler | Uygulandı | `src/toolcall_tr/models.py`, `source.py`, `artifacts.py`, `events.py`, `diagnostics.py` | Pydantic strict/frozen, extra alan reddi, role/call/state doğrulaması |
-| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Seksen üç immutable versioned artifact; dialect ve meta-schema kontrolü |
+| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Seksen beş immutable versioned artifact; dialect ve meta-schema kontrolü |
 | Diagnostic catalog | Uygulandı | `src/toolcall_tr/data/diagnostic_catalog.json` | Bilinen kodların anlamı catalogdan gelir; bilinmeyen kod fail-closed |
 | Canonical JSON/hash/ID | Uygulandı | `src/toolcall_tr/hashing.py`, `ids.py` | RFC 8785/JCS, SHA-256, key-order invariance, non-finite sayı reddi |
 | Artifact manifesti | Uygulandı | `src/toolcall_tr/artifacts.py`, `shards.py` | Content-addressed isim, dengeli row accounting, validate-before-publish, overwrite yasağı, idempotent resume |
@@ -49,11 +49,12 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 | Faz 5 terminology/research metadata | Fixture düzeyinde uygulandı | `research_policy.py` | Deterministic abbreviation/policy-risk router, public HTTPS/bütçe validator ve not-sent evidence sidecar; fetch yok |
 | Canlı provider smoke | Uygulandı, sentetik sınırda | `secure_transport.py`, `credentials.py`, `deepseek_adapter.py`, `openai_judge.py`, `live_preflight.py`, `provider smoke` CLI | DeepSeek V4 çeviri ve OpenAI GPT-5.4-mini judge için gerçek endpoint smoke'u geçti; sabit sentetik içerik, explicit live config, endpoint allow-list, preflight ve local strict validation. Gerçek kaynak satırı bu endpointlere gönderilmedi. |
 | Operasyonel kaynak pilotu | Uygulandı, gerçek kaynak kanıtıyla | `src/toolcall_tr/pilot.py`, `pilot run` CLI | When2Call revision `0582f…ace53`, tüm splitler: 27.952 satır / 27.393 canonical / 559 karantina / 136 cross-split conflict. Training için source-explicit `<TOOLCALL>`, açık clarification ve açık tool-unavailable hedefleri alınır. xLAM 60k revision `26d14e…7866`: 57.718 canonical / 2.282 karantina / 6 hard-conflict. Kaynak yeniden hash'lendi; model/provider çağrısı yok. |
+| Pre-review canary | Uygulandı, sınırlı gerçek kaynak canlı kanıtıyla | `pre_review_canary.py`, `canary prepare`, `canary evaluation-inputs` | En çok 30 episode; yalnız source-explicit, policy-covered, conflict-free ve exact-alias dışı kayıtlar. When2Call'da 3 episode / 20 leaf `translation-prompt-0.2.0` ile DeepSeek V4 Flash'ta çevrildi; GPT-5.4-mini 20/20 `pass`, 0 finding. Her çıktı `promotion=not_eligible`, `gold_release_allowed=false`; insan kabulunu ikame etmez. |
 | İnsan review kuyruğu | Uygulandı, gerçek karar bekliyor | `review_queue.py`, `review prepare` CLI | Immutable karantina/audit kanıtları sıralı human-only görevlere dönüşür; 2026-08-13 yerel kuyruğu 2.841 karantina + 142 conflict görevi taşır (`manifest_a523…c8d`). Karar, drop veya kaynak değişikliği üretmez. |
 | İnsan review ve Gold release | Uygulandı, gerçek karar bekliyor | `human_review_log.py`, `review submit-*`, `release build/validate` | Haricî tek-kayıt reviewer JSONL strict doğrulanır ve hash zincirine append edilir. Release her satır için local verdict, açık human acceptance ve linked review ID olmadan oluşmaz. |
 | Provider attempt provenance | Uygulandı | `provider_provenance.py`, canlı adapterlar | Ham içerik veya credential saklamayan hash-only attempt kaydı; preflight/success/failure ve status sınıfları, otomatik retry bütçesi 0. |
-| Operasyonel canlı çeviri | Uygulandı, gerçek-source policy coverage tamam; egress yetkisi kapalı | `src/toolcall_tr/operational_translation.py`, `translate` CLI | Yalnız field-policy tarafından izinli leaf'ler DeepSeek'e gider; gerçek canonical coverage ağsız geçti, source rehash ve host merge zorunlu. 3 sentetik no-tool episode'u gerçek endpointte geçti. İnsan review/selection kapıları nedeniyle gerçek kaynak egress'i, otomatik retry, Gold ve release yok. |
-| Operasyonel canlı judge | Uygulandı, gerçek kaynak egress'i kapalı | `src/toolcall_tr/live_evaluation.py`, `evaluation run` CLI | Tam-leaf hash'li source/target input, role-specific OpenAI judge, immutable attempt/result/report artifactları. 1 sentetik girdi GPT-5.4-mini ile geçti; model çıktısı `gold_release_allowed=false` kalır. |
+| Operasyonel canlı çeviri | Uygulandı, pre-review canary ile sınırlı | `src/toolcall_tr/operational_translation.py`, `translate` CLI | Yalnız field-policy tarafından izinli leaf'ler DeepSeek'e gider; source rehash ve host merge zorunlu. 3 sentetik no-tool episode'u ve 3 conflict-free When2Call episode'unun 20 leaf'i gerçek endpointte geçti. Otomatik retry, S400/Gold/release yok; insan kabulunu ikame etmez. |
+| Operasyonel canlı judge | Uygulandı, pre-review canary ile sınırlı | `src/toolcall_tr/live_evaluation.py`, `evaluation run` CLI | Tam-leaf hash'li source/target input, role-specific OpenAI judge, immutable attempt/result/report artifactları. 1 sentetik ve 20 pre-review When2Call leaf'i GPT-5.4-mini ile geçti; model çıktısı `gold_release_allowed=false` kalır. |
 | Faz 6–7 render/loss-mask | Sözleşme kodu mevcut | `src/toolcall_tr/render_contract.py` | Enjekte edilmiş renderer/tokenizer, pinli config, teknik yapı ve final assistant payload eşleşmesi, tek target span ve truncation/offset uyuşmazlığında ret; model hub, chat-template/tokenizer indirme veya render CLI yok |
 | Release manifest (Gold JSONL) | Fixture düzeyinde uygulandı | `release_contract.py`, `test_release_contract.py` | Sıralı yerel JSONL dosyalarının byte hash/row count doğrulaması, episode sırası ve açık human-review ID ile Gold üyeliği; gerçek release, Parquet, Dataset Card veya Hugging Face yok |
 | Research/memory/repair ve gerçek dataset provider koşusu | Kısmen uygulandı | Faz 5+ | Prompt, provider adapter, live translation/judge batch sözleşmeleri vardır. Research fetch, automated repair, gerçek kaynak üzerinde çalıştırma ve batch auto-retry yok. |
@@ -101,6 +102,8 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `operational-translation-result.schema.json`
 - `near-duplicate-candidate.schema.json`
 - `phase4-config.schema.json`
+- `pre-review-canary.schema.json`
+- `pre-review-canary-member.schema.json`
 - `prompt-bundle.schema.json`
 - `prompt-layer.schema.json`
 - `pre-egress-decision.schema.json`
@@ -200,10 +203,10 @@ uv run python -c "import json; from pathlib import Path; from jsonschema import 
 
 ## Sonraki uygulama sırası
 
-1. Hazır `review prepare` kuyruğundaki 2.841 karantina ve 142 unresolved conflict'i kaynak kayıtlarını değiştirmeden yetkili insan review/adjudication ile ele al. Quarantine/conflict varsa karar olmadan devam etme.
-2. Canonical survivor'lar üzerinde Faz 4 source evidence/selection artifactlarını üret; source-review/adjudication kararlarını yalnız yetkili insanlarla append-only loga al ve S400'ü ancak tüm kapılar kanıtlandıktan sonra dondur.
-3. Render/loss-mask sözleşmesini gerçek hedef renderer/tokenizer ile ek kabul testlerinden geçir; target-only supervision sınırını kanıtla.
-4. Küçük, onaylı pilot membership sağlandığında `translate` ve `evaluation run` komutlarını preflight ve hash-only attempt kayıtlarıyla çalıştır; model çıktısını Gold kabulü sayma.
+1. Pre-review canary'leri en çok 30 episode ve açık segment bütçesiyle; prompt sürümü, provider attempt manifestleri ve model triage sonucu pinlenmiş olarak çalıştır. Bu sonuçlar S400/Gold/release üyeliği veya insan kararının yerine geçmez.
+2. Canonical survivor'lar üzerinde Faz 4 source evidence/selection artifactlarını üret; source-review/adjudication kararlarını yalnız yetkili insanlarla append-only loga al ve S400'ü ancak tüm kapılar ve pre-review sonuçları kanıtlandıktan sonra dondur.
+3. Hazır `review prepare` kuyruğundaki 2.841 karantina ve 142 unresolved conflict'i, önceki bütün deterministik/model canary sonuçlarıyla birlikte kaynak kayıtlarını değiştirmeden yetkili insan review/adjudication ile son kabulda ele al.
+4. Render/loss-mask sözleşmesini gerçek hedef renderer/tokenizer ile ek kabul testlerinden geçir; target-only supervision sınırını kanıtla.
 5. Reviewer kararlarını `review submit-evaluation` ile zincire ekle. Her Gold satırını local model verdict + explicit human acceptance ile bağladıktan sonra `release build`/`release validate` çalıştır; Parquet/HF yayını için ayrıca karar ve kabul kapısı gerekir.
 
 API anahtarı eklemek tek başına gerçek kaynak egress'i izni vermez. Varsayılan config çevrimdışıdır; canlı ağ erişimi explicit `--live`, non-default config, allow-list transport, preflight ve disjoint output ile mümkündür. Gerçek kaynak için insan-review/selection kapıları geçilmeden `translate` veya `evaluation run` çalıştırılmaz.

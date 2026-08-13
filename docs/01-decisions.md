@@ -1,8 +1,8 @@
 # 01 — Kararlar ve kapsam
 
-Durum: **Faz 1–5 sözleşmeleri ve sınırlı canlı provider yüzeyi `0.1.0` olarak uygulandı; iki gerçek kaynakta modelsiz pilot kanıtı vardır**
+Durum: **Faz 1–5 sözleşmeleri, sınırlı canlı provider yüzeyi ve en çok 30 episode'luk pre-review canary `0.1.0` olarak uygulandı; iki gerçek kaynakta modelsiz pilot kanıtı vardır**
 
-Bu belgedeki V1 kararları hedef sözleşmeyi tarif eder. Bugün çalışan yüzey; strict schema, kimlik/hash, snapshot/ingest, artifact/event, kaynak-biçimli adapterlar, canonicalizer, tool registry, explicit-kanıtlı source-evidence Pass 1, duplicate/conflict audit, insan-kapılı selection freeze, field-policy/host merge, pre-egress guard, canlı provider adapterları ve review/release kapılarını içerir. NVIDIA When2Call ve Salesforce xLAM 60k üzerinde modelsiz pilotlar tamamlanmıştır. Bu, gerçek kaynak doğruluğu için insan adjudication, gerçek kaynak egress'i, S400 kabulü veya release izni değildir. Ayrıntılı kanıt tablosu için [06 — Uygulama durumu](06-implementation-status.md) belgesine bakın.
+Bu belgedeki V1 kararları hedef sözleşmeyi tarif eder. Bugün çalışan yüzey; strict schema, kimlik/hash, snapshot/ingest, artifact/event, kaynak-biçimli adapterlar, canonicalizer, tool registry, explicit-kanıtlı source-evidence Pass 1, duplicate/conflict audit, insan-kapılı selection freeze, field-policy/host merge, pre-egress guard, canlı provider adapterları, en çok 30 episode'luk pre-review canary ve review/release kapılarını içerir. NVIDIA When2Call ve Salesforce xLAM 60k üzerinde modelsiz pilotlar tamamlanmıştır; ayrıca conflict-free 3 When2Call episode'u canlı canary'de çevrilip model-triage edildi. Bu, insan adjudication, S400 kabulü veya release izni değildir. Ayrıntılı kanıt tablosu için [06 — Uygulama durumu](06-implementation-status.md) belgesine bakın.
 
 ## 1. Başarı tanımı
 

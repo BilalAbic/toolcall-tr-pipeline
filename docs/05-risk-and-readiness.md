@@ -2,7 +2,7 @@
 
 Bu belge, planın en kritik arıza biçimlerini görünür tutar ve bir sonraki faza geçmeden önce kontrol edilecek kısa listeleri tanımlar. Ayrıntılı süreçleri tekrar etmez; `02-data-pipeline.md` ve `04-implementation-plan.md` kapılarına bağlanır.
 
-Güncel karar: **Faz 1–5 temel, sınırlı canlı provider yüzeyi, iki gerçek kaynağın modelsiz pilotu ve karar üretmeyen insan-review worklist'i hazırdır; bu gerçek kaynak egress'i, insan review kararı veya release'e geçiş onayı değildir.** Varsayılan config çevrimdışıdır; canlı komutlar explicit `--live`, non-default config, preflight ve disjoint output gerektirir. Aşağıdaki listelerde test/model kanıtı, modelsiz gerçek kaynak kanıtı ve henüz açık üretim koşulları ayrılır.
+Güncel karar: **Faz 1–5 temel, sınırlı canlı provider yüzeyi, iki gerçek kaynağın modelsiz pilotu, karar üretmeyen insan-review worklist'i ve en çok 30 episode'luk pre-review canary yüzeyi hazırdır; bu insan review kararı veya release'e geçiş onayı değildir.** Pre-review canary, teknik/prompt/provider testini insan kabulundan önce yapabilir; insan review S400/Gold/release için son karar kapısıdır. Varsayılan config çevrimdışıdır; canlı komutlar explicit `--live`, non-default config, preflight ve disjoint output gerektirir. Aşağıdaki listelerde test/model kanıtı, modelsiz gerçek kaynak kanıtı ve henüz açık üretim koşulları ayrılır.
 
 ## 1. Öncelikli risk kaydı
 
@@ -51,10 +51,11 @@ Gerçek kaynak üzerinde tamamlanan kanıt:
 - [x] Salesforce xLAM 60k train revision-pinned pilot: 60.000 kaynak-valid satır, 57.718 canonical, 2.282 gerekçeli karantina, 6 insan-review hard conflict adayı.
 - [x] Her iki pilot kaynak değişiminde fail-closed rehash, immutable artifact publish ve kaynak-provider egress'i olmadan çalıştı.
 - [x] Karar üretmeyen `review prepare` worklist'i, güncel beş canonical-quarantine artifactı ve iki exact audit'ten 2.841 karantina + 142 conflict görevi yayımladı; otomatik drop veya kabul yok.
+- [x] Pre-review canary yalnız source-explicit, policy-covered, conflict-free ve exact-alias dışı kayıtları en çok 30 episode ile sınırlar. When2Call'da `translation-prompt-0.2.0` ile 3 episode / 20 leaf çevrildi; GPT-5.4-mini triage 20/20 pass, 0 finding verdi. Çıktılar Gold-ineligible kalır.
 
 Gerçek kaynak üzerinde açık kapı:
 
-- [ ] Hazır 2.983 görevlik worklist'teki When2Call 559 / xLAM 2.282 karantina ve When2Call 136 / xLAM 6 unresolved conflict, yetkili insan tarafından kaynak kurallarına göre adjudicate edilmeli; hiçbir kayıt otomatik onarılmamalı.
+- [ ] Hazır 2.983 görevlik worklist'teki When2Call 559 / xLAM 2.282 karantina ve When2Call 136 / xLAM 6 unresolved conflict, bütün pre-review canary kanıtları tamamlandıktan sonra yetkili insan tarafından kaynak kurallarına göre son kabulda adjudicate edilmeli; hiçbir kayıt otomatik onarılmamalı.
 - [ ] Her canonical araç argümanı için gerçek source-evidence Pass 1 ve insan `source_valid` kararları üretilmeli.
 - [ ] Faz 4–7 S400 membership, gerçek renderer/loss-mask ve insan review kapıları tamamlanmalı.
 

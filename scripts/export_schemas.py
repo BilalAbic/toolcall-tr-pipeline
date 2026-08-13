@@ -53,6 +53,7 @@ from toolcall_tr.operational_translation import (
 )
 from toolcall_tr.phase4_config import Phase4Config
 from toolcall_tr.pilot import CanonicalQuarantineRecord, PilotRunReport, TolerantPilotRunReport
+from toolcall_tr.pre_review_canary import PreReviewCanaryManifest, PreReviewCanaryMember
 from toolcall_tr.prompt_contract import PromptBundle, PromptLayer
 from toolcall_tr.provider_provenance import (
     ProviderAttemptRecord,
@@ -132,6 +133,8 @@ MODELS = {
     "segment-translation.schema.json": FieldPolicySegmentTranslation,
     "near-duplicate-candidate.schema.json": NearDuplicateCandidate,
     "phase4-config.schema.json": Phase4Config,
+    "pre-review-canary.schema.json": PreReviewCanaryManifest,
+    "pre-review-canary-member.schema.json": PreReviewCanaryMember,
     "operational-pilot.schema.json": PilotRunReport,
     "operational-pilot-tolerant.schema.json": TolerantPilotRunReport,
     "canonical-quarantine.schema.json": CanonicalQuarantineRecord,
