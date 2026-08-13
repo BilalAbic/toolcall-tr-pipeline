@@ -1,6 +1,6 @@
 # 03 — Prompt, araştırma ve kalite tasarımı
 
-Durum: **Faz 5 sözleşme/güvenlik tabanı ve bounded canlı yürütme yüzeyi uygulanmıştır.** `field_policy.py` explicit leaf extraction ve host-side merge'i; `translation_contract.py` segment-only request/response, sentinel, NFC ve coverage kontrolünü; `egress_guard.py` secret/PII/local path/private endpoint taramasını; `eval_contract.py` atomic MQM bulguları, Wilson %95 coverage raporu ve human-only gold kabulünü; `prompt_contract.py` immutable katmanlı prompt bundle'ı uygular. `secure_transport.py`, allow-list'li `.env` resolver ve DeepSeek/OpenAI adapterları yalnız explicit `--live`, non-default config, preflight ve disjoint output ile çalışır; tarihsel 3 episode / 20 leaf pre-review canary'nin yanında, v0.3 / Flash 6-worker 50-episode regression'ı 46 translation, 541 accepted leaf ve 40 pending-HF row üretti. `translation_memory.py` yalnız human-promoted full segmentleri tüm exact context/policy anahtarıyla bulur ve hedef conflictinde fail-closed kalır. `research_policy.py` deterministik risk routing ile public-HTTPS/bütçeli not-sent request/evidence metadata sağlar, fetch içermez. Automated repair, insan review, S400 ve Gold release hâlâ kapalıdır; eval verdict'i yalnız triage'dır. Aktif v0.4 prompt ayrı immutable batch'te doğrulanacaktır.
+Durum: **Faz 5 sözleşme/güvenlik tabanı ve bounded canlı yürütme yüzeyi uygulanmıştır.** `field_policy.py` explicit leaf extraction ve host-side merge'i; `translation_contract.py` segment-only request/response, sentinel, NFC ve coverage kontrolünü; `egress_guard.py` secret/PII/local path/private endpoint taramasını; `eval_contract.py` atomic MQM bulguları, Wilson %95 coverage raporu ve human-only gold kabulünü; `prompt_contract.py` immutable katmanlı prompt bundle'ı uygular. `secure_transport.py`, allow-list'li `.env` resolver ve DeepSeek/OpenAI adapterları yalnız explicit `--live`, non-default config, preflight ve disjoint output ile çalışır; tarihsel 3 episode / 20 leaf pre-review canary'nin yanında, doğrulanmış v0.3 / Flash 6-worker 50-episode regression'ı 46 translation, 541 accepted leaf ve 40 pending-HF row üretti. v0.4 aday prompt aynı cohortta daha düşük kabul sonucu verdiği için production'a alınmadı. `translation_memory.py` yalnız human-promoted full segmentleri tüm exact context/policy anahtarıyla bulur ve hedef conflictinde fail-closed kalır. `research_policy.py` deterministik risk routing ile public-HTTPS/bütçeli not-sent request/evidence metadata sağlar, fetch içermez. Automated repair, insan review, S400 ve Gold release hâlâ kapalıdır; eval verdict'i yalnız triage'dır. Canlı çeviri artık yalnız `promotion_status=validated` prompt bundle ile mümkündür.
 
 ## 1. Ana ilke
 
@@ -51,12 +51,15 @@ Argument değerleri varsayılan olarak modele gönderilmez: `configs/field_polic
 
 ## 3. Çevirici system prompt katmanları
 
-`translation-prompt-0.4.0`, 50-episode v0.3 regression’ında strong judge’ın
-doğruladığı altı fail’den türetilmiş dar karşıt örnekler taşır: gaz/benzin
-anlam daraltması, `represents` ilişkisinin ters çevrilmesi, entity-address
-attachment, konum kapsamı ve doğal olmayan `ride type` calque’u. Bu örnekler
-yalnız doğal dil leaf’leri içindir; tool argument, enum, ID ve URL kuralı
-değişmez. Yeni prompt sonraki ayrı immutable batch’te canlı doğrulanır.
+`translation-prompt-0.4.0` aday deneyiydi: v0.3 regression’ında strong judge’ın
+doğruladığı altı fail’den türetilmiş dar karşıt örnekler taşıdı. Aynı cohortta
+535 accepted leaf ve bir strong `provider_response_invalid` sonucu verdiği için
+v0.3’ün 541 accepted leaf / 0 unavailable sonucunu geçemedi; production'a
+alınmadı. Bu deney, prompt değişiminin ancak ayrı immutable regression
+sonrasında promotion alabileceğinin kanıtıdır. Prompt bundle `candidate`,
+`validated` veya `retired` durumunu içerir; operational translation candidate
+ve retired bundle'ı transport öncesi reddeder. Tool argument, enum, ID ve URL
+kuralı değişmez.
 
 Tek büyük ve tekrarlı system prompt yerine derlenen kısa katmanlar kullanılır:
 

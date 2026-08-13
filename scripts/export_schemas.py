@@ -168,7 +168,7 @@ MODELS = {
     "operational-translation.schema.json": OperationalTranslationReport,
     "operational-translation-result.schema.json": OperationalTranslationResult,
     "leaf-translation-record.schema.json": LeafTranslationRecord,
-    "prompt-bundle.schema.json": PromptBundle,
+    "prompt-bundle-0.1.1.schema.json": PromptBundle,
     "prompt-layer.schema.json": PromptLayer,
     "pre-egress-decision.schema.json": PreEgressDecision,
     "protected-token.schema.json": ProtectedToken,

@@ -34,7 +34,7 @@ from toolcall_tr.field_policy import (
 from toolcall_tr.hashing import canonical_bytes, sha256_bytes, sha256_jcs, stable_id
 from toolcall_tr.jsonio import iter_jsonl
 from toolcall_tr.models import CanonicalEpisode, Sha256, StrictModel
-from toolcall_tr.prompt_contract import PromptBundle
+from toolcall_tr.prompt_contract import PromptBundle, PromptContractError, require_validated_prompt
 from toolcall_tr.provider_adapter import ResponsesTransport
 from toolcall_tr.provider_provenance import (
     ProviderAttemptRecord,
@@ -417,6 +417,10 @@ def run_operational_translation(
     only intermediate translation evidence; review, Gold, and release remain
     separate human-gated stages.
     """
+    try:
+        require_validated_prompt(prompt)
+    except PromptContractError as exc:
+        raise OperationalTranslationError(str(exc)) from exc
     if not config.providers.enabled or not config.providers.network_egress_enabled:
         raise OperationalTranslationError("translation requires both live provider gates")
     role = config.providers.translator

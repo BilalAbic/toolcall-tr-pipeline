@@ -5,10 +5,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
+import pytest
+
 from tests.helpers import canonical_fixture
 from tests.test_provider_adapter import config as base_config
 from toolcall_tr.audit import audit_exact_conflicts
 from toolcall_tr.autonomous_pipeline import (
+    AutonomousPipelineError,
     build_automation_consensus,
     build_hierarchical_consensus,
     build_huggingface_review_package,
@@ -240,6 +243,26 @@ def _prepare_candidates(tmp_path: Path) -> tuple[Path, list[CanonicalEpisode]]:
     )
     candidate_path = next((candidate_root / "canonical").glob("*.jsonl"))
     return candidate_path, episodes
+
+
+def test_automation_refuses_candidate_prompt_before_transport(tmp_path: Path) -> None:
+    candidate_path, _ = _prepare_candidates(tmp_path)
+    transport = TranslationTransport()
+    candidate_prompt = load_prompt_bundle(ROOT / "configs" / "prompt_bundle.toml").model_copy(
+        update={"promotion_status": "candidate"}
+    )
+
+    with pytest.raises(AutonomousPipelineError, match="promotion_status=validated"):
+        run_automation_translation(
+            candidate_path,
+            tmp_path / "translation",
+            config=_live_config(),
+            field_policy=load_field_policy(ROOT / "configs" / "field_policy.toml"),
+            prompt=candidate_prompt,
+            transport=transport,
+        )
+
+    assert transport.calls == []
 
 
 def test_automation_falls_back_without_stopping_and_builds_review_ready_hf_jsonl(

@@ -162,6 +162,14 @@ Paket ID:
 Paket `pending_human_approval` ve `publish_allowed=false` durumundadır; insan
 onayı olmadan Gold/release/Hugging Face publish yapılamaz.
 
-Güçlü judge’ın altı gerçek fail bulgusu `translation-prompt-0.4.0` için dar
-karşıt örneklere dönüştürüldü. v0.4, bu immutable v0.3 kanıtını değiştirmez;
-sonraki ayrı batch’te canlı regression ile ölçülür.
+Güçlü judge’ın altı gerçek fail bulgusu `translation-prompt-0.4.0` adayına dar
+karşıt örnekler olarak eklendi. Aynı 50-episode cohort’taki ayrı immutable v0.4
+regression’u 535 accepted leaf ve bir `provider_response_invalid` unavailable
+güçlü-judge sonucu verdi; doğrulanmış v0.3’ün 541 accepted leaf / 0 unavailable
+sonucunu geçemediği için promotion reddedildi. Tarihsel artifact saklanır fakat
+aktif prompt yeniden v0.3’tür.
+
+Operational translation, prompt bundle’daki `promotion_status` alanını transport
+öncesinde denetler: yalnız `validated` canlı egress başlatabilir; `candidate` ve
+`retired` durumları fail-closed reddedilir. Böylece geliştirme adayları yeni bir
+immutable regression ve açık promotion kararı olmadan ana üretime giremez.

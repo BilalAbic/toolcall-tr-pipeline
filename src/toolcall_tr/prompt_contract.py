@@ -22,6 +22,7 @@ PromptLayerName = Literal[
     "contrastive_examples",
 ]
 PromptId = Annotated[str, Field(pattern=r"^prompt_[0-9a-f]{64}$")]
+PromptPromotionStatus = Literal["candidate", "validated", "retired"]
 
 _REQUIRED_LAYERS: tuple[PromptLayerName, ...] = (
     "core_contract",
@@ -53,9 +54,10 @@ class PromptLayer(StrictModel):
 class PromptBundle(StrictModel):
     """Fixed-order, content-addressed system-prompt layers for a future adapter."""
 
-    schema_version: Literal["prompt-bundle-0.1.0"] = "prompt-bundle-0.1.0"
+    schema_version: Literal["prompt-bundle-0.1.1"] = "prompt-bundle-0.1.1"
     prompt_id: PromptId
     prompt_version: NonEmptyStr
+    promotion_status: PromptPromotionStatus
     output_schema_version: Literal["translation-response-0.1.0"]
     layers: list[PromptLayer]
 
@@ -92,20 +94,33 @@ def make_prompt_layer(*, name: PromptLayerName, version: str, content: str) -> P
 
 
 def build_prompt_bundle(
-    *, prompt_version: str, layers: list[PromptLayer]
+    *,
+    prompt_version: str,
+    layers: list[PromptLayer],
+    promotion_status: PromptPromotionStatus = "validated",
 ) -> PromptBundle:
     body = {
-        "schema_version": "prompt-bundle-0.1.0",
+        "schema_version": "prompt-bundle-0.1.1",
         "prompt_version": prompt_version,
+        "promotion_status": promotion_status,
         "output_schema_version": "translation-response-0.1.0",
         "layers": [layer.model_dump(mode="json") for layer in layers],
     }
     return PromptBundle(
         prompt_id=stable_id("prompt", body),
         prompt_version=prompt_version,
+        promotion_status=promotion_status,
         output_schema_version="translation-response-0.1.0",
         layers=layers,
     )
+
+
+def require_validated_prompt(prompt: PromptBundle) -> None:
+    """Reject a candidate or retired prompt before it can trigger live egress."""
+    if prompt.promotion_status != "validated":
+        raise PromptContractError(
+            "live translation requires a prompt bundle with promotion_status=validated"
+        )
 
 
 def load_prompt_bundle(path: Path) -> PromptBundle:
@@ -135,4 +150,16 @@ def load_prompt_bundle(path: Path) -> PromptBundle:
     prompt_version = parsed.get("prompt_version")
     if not isinstance(prompt_version, str):
         raise PromptContractError("prompt bundle requires prompt_version")
-    return build_prompt_bundle(prompt_version=prompt_version, layers=layers)
+    promotion_status = parsed.get("promotion_status")
+    if promotion_status not in {"candidate", "validated", "retired"}:
+        raise PromptContractError(
+            "prompt bundle requires promotion_status=candidate, validated, or retired"
+        )
+    unexpected = set(parsed) - {"prompt_version", "promotion_status"}
+    if unexpected:
+        raise PromptContractError("prompt bundle contains unknown top-level fields")
+    return build_prompt_bundle(
+        prompt_version=prompt_version,
+        promotion_status=cast(PromptPromotionStatus, promotion_status),
+        layers=layers,
+    )

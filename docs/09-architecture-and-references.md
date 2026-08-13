@@ -17,7 +17,7 @@ fail-closed ML veri kümesi curation pipeline**'ıdır. Yani:
   hash ile adlandırılır), manifest'ler kendi gövdesinin SHA-256'sıdır ve
   `events.py` **append-only doğrulanmış hash zinciri** (blockchain-benzeri)
   tutar.
-- **Schema-driven**: her JSONL satırı kendi `schema_version`'ını taşır; 98 adet
+- **Schema-driven**: her JSONL satırı kendi `schema_version`'ını taşır; 99 adet
   Draft 2020-12 JSON Schema ile `StrictModel` (pydantic strict) üzerinden
   doğrulanır; bayt temsili RFC 8785 JCS ile kanoniktir.
 - **Fail-closed**: belirsizlik asla sessizce düşürülmez; quarantine / review /
@@ -45,7 +45,7 @@ dışa açılmasıdır* (bkz. §4).
 | `release_manifest`, `DATASET_CARD.md`, split/record-set tanımları | **MLCommons Croissant** (Dataset/Resource/Structure/Semantic katmanları) | Kısmi; Croissant JSON-LD export yok |
 | `docs/`, `DATASET_CARD.md`, motivation/collection/limitations | **Datasheets for Datasets** / **Model Cards** | Kısmi |
 | `field_policy.toml`, `configs/prompt_bundle.toml`, A0 contract freeze | **Croissant RAI**, **NIST AI RMF** governence | Uygulandı (içsel) |
-| `StrictModel` + 98 Draft 2020-12 schema + RFC 8785 JCS | **JSON Schema 2020-12**, **RFC 8785** | Uygulandı |
+| `StrictModel` + 99 Draft 2020-12 schema + RFC 8785 JCS | **JSON Schema 2020-12**, **RFC 8785** | Uygulandı |
 
 ## 3. Kaynaklar (kanonik referanslar)
 

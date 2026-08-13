@@ -48,7 +48,7 @@ from toolcall_tr.operational_translation import (
     OperationalTranslationResult,
     run_operational_translation,
 )
-from toolcall_tr.prompt_contract import PromptBundle
+from toolcall_tr.prompt_contract import PromptBundle, PromptContractError, require_validated_prompt
 from toolcall_tr.provider_adapter import ProviderAdapterError, ResponsesTransport
 from toolcall_tr.provider_provenance import ProviderAttemptRecord, ProviderFailureCode
 from toolcall_tr.provider_usage import ProviderUsageSinkError
@@ -817,6 +817,10 @@ def run_automation_translation(
     max_workers: int = 1,
 ) -> AutomationTranslationReport:
     """Translate every candidate, continuing after safe failures with one fallback."""
+    try:
+        require_validated_prompt(prompt)
+    except PromptContractError as exc:
+        raise AutonomousPipelineError(str(exc)) from exc
     if not config.providers.enabled or not config.providers.network_egress_enabled:
         raise AutonomousPipelineError("automation translation requires both live provider gates")
     if not 1 <= max_workers <= 16:

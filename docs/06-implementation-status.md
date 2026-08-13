@@ -23,7 +23,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 |---|---|---|---|
 | Proje iskeleti ve kilitli ortam | Uygulandı | `pyproject.toml`, `uv.lock`, `src/toolcall_tr/`, `tests/` | Python 3.12, `uv`, pytest/Hypothesis, Ruff ve Pyright yapılandırması |
 | Strict sözleşmeler | Uygulandı | `src/toolcall_tr/models.py`, `source.py`, `artifacts.py`, `events.py`, `diagnostics.py` | Pydantic strict/frozen, extra alan reddi, role/call/state doğrulaması |
-| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Doksan sekiz immutable versioned artifact; dialect ve meta-schema kontrolü |
+| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Doksan dokuz immutable versioned artifact; dialect ve meta-schema kontrolü |
 | Diagnostic catalog | Uygulandı | `src/toolcall_tr/data/diagnostic_catalog.json` | Bilinen kodların anlamı catalogdan gelir; bilinmeyen kod fail-closed |
 | Canonical JSON/hash/ID | Uygulandı | `src/toolcall_tr/hashing.py`, `ids.py` | RFC 8785/JCS, SHA-256, key-order invariance, non-finite sayı reddi |
 | Artifact manifesti | Uygulandı | `src/toolcall_tr/artifacts.py`, `shards.py` | Content-addressed isim, dengeli row accounting, validate-before-publish, overwrite yasağı, idempotent resume |
@@ -119,7 +119,8 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `phase4-config.schema.json`
 - `pre-review-canary.schema.json`
 - `pre-review-canary-member.schema.json`
-- `prompt-bundle.schema.json`
+- `prompt-bundle.schema.json` (tarihsel `0.1.0`)
+- `prompt-bundle-0.1.1.schema.json` (promotion durumu içeren güncel sözleşme)
 - `prompt-layer.schema.json`
 - `pre-egress-decision.schema.json`
 - `protected-token.schema.json`

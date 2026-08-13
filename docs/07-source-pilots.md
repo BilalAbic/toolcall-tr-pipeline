@@ -91,9 +91,28 @@ yetkisi değildir.
 
 Strong judge’ın altı doğrulanmış fail’i (gaz/benzin anlam daraltması, `null`
 temsil ilişkisi, entity-address attachment, konum kapsamı ve iki akıcılık/terim
-calque’u) `translation-prompt-0.4.0` için dar karşıt örneklere dönüştürüldü.
-v0.4 sonraki ayrı immutable batch’te canlı doğrulanacaktır; bu mevcut kanıt
-artifactini değiştirmez.
+calque’u) `translation-prompt-0.4.0` adayına dar karşıt örnekler olarak eklendi.
+
+## Prompt v4 aday regression’u — promotion reddi
+
+`when2call-xlam-50-prompt-v4-workers6-20260813`, aynı immutable cohort ve
+Flash altı worker ile v0.4 aday prompt’unu ayrı output kökünde ölçtü. v0.3’e
+göre daha düşük kabul ve bir unavailable güçlü-judge sonucu verdiği için
+**promotion reddedildi**; aktif config yeniden doğrulanmış v0.3’tür.
+
+| Aşama | Sonuç |
+|---|---|
+| Translation | 46 host-merged translation, 4 `needs_review`, fallback route 0 |
+| Mini judge | 547 verdict: 520 `pass`, 19 `fail`, 8 `needs_human_review` |
+| Strong judge | 38 escalation: 26 `pass`, 11 `fail`, 1 `unavailable` (`provider_response_invalid`) |
+| Hierarchical consensus | 535 accepted leaf, 12 `needs_review` |
+| HF review paketi | 36 strict satır; `hfpackage_d30b7915…8467`; insan onayı bekliyor |
+| Token/maliyet | Flash `$0.0477`, GPT-5.4-mini `$0.4083`, GPT-5.4 `$0.1099`; toplam `$0.566106` |
+
+Tarihsel v0.4 artifact’i silinmez veya yeniden yazılmaz. Yeni operational
+translation çağrısı, `candidate` ya da `retired` promotion durumundaki prompt
+bundle’ını transport öncesinde reddeder; yalnız `validated` bundle canlı egress
+başlatabilir.
 
 ## NVIDIA When2Call
 

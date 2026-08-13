@@ -136,3 +136,23 @@ def test_batch_refuses_output_inside_input_tree_before_transport(
         )
 
     assert transport.calls == []
+
+
+def test_batch_refuses_candidate_prompt_before_transport(
+    tmp_path: Path, fixture_root: Path
+) -> None:
+    input_path = _input(tmp_path, fixture_root)
+    transport = TranslatingTransport()
+    candidate_prompt = prompt().model_copy(update={"promotion_status": "candidate"})
+
+    with pytest.raises(OperationalTranslationError, match="promotion_status=validated"):
+        run_operational_translation(
+            input_path,
+            tmp_path / "derived",
+            config=live_deepseek_config(),
+            field_policy=_policy(),
+            prompt=candidate_prompt,
+            transport=transport,
+        )
+
+    assert transport.calls == []
