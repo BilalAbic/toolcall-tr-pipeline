@@ -40,6 +40,13 @@ geçersiz tool argümanı karantina kanıtı olarak kalır. İlk, tüm-training-
 pilotları korunmuş immutable geçmiş kanıttır; yukarıdaki v2 pilotları doğru
 source target semantiğini temsil eder.
 
+### Field-policy coverage
+
+When2Call ve xLAM birlikte 85.111 canonical episode üzerinde ağsız policy
+coverage koşusu yapıldı: 849.064 policy-izinli segment ve 0 unresolved policy
+error. Tool/parameter açıklamaları çevrilebilir; argumentlar varsayılan olarak
+`copy_exact` kalır ve provider'a gönderilmez.
+
 ## Salesforce xLAM Function Calling 60k
 
 | Alan | Değer |

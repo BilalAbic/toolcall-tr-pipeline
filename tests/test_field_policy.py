@@ -35,12 +35,12 @@ def policy(*, descriptions: FieldAction = FieldAction.COPY_EXACT) -> FieldPolicy
     )
 
 
-def test_checked_in_field_policy_is_fail_closed_for_tools() -> None:
+def test_checked_in_field_policy_translates_documentation_but_copies_all_arguments() -> None:
     root = Path(__file__).resolve().parents[1]
     field_policy = load_field_policy(root / "configs" / "field_policy.toml")
-    assert field_policy.tool_description_action is FieldAction.MANUAL_POLICY_REQUIRED
-    assert field_policy.parameter_description_action is FieldAction.MANUAL_POLICY_REQUIRED
-    assert field_policy.argument_policies == []
+    assert field_policy.tool_description_action is FieldAction.TRANSLATE
+    assert field_policy.parameter_description_action is FieldAction.TRANSLATE
+    assert field_policy.argument_action("any_tool", "/any/nested/path") is FieldAction.COPY_EXACT
 
 
 def test_extracts_only_user_and_assistant_content_for_no_tool_episode(fixture_root: Path) -> None:
@@ -74,6 +74,57 @@ def test_uncovered_textual_argument_fails_closed(fixture_root: Path) -> None:
                 parameter_description_action=FieldAction.COPY_EXACT,
                 argument_policies=[],
             ),
+        )
+
+
+def test_global_copy_fallback_unlocks_tool_documentation_without_exposing_arguments(
+    fixture_root: Path,
+) -> None:
+    episode = canonical_fixture(fixture_root / "xlam", "xlam")
+    extraction = extract_leaf_segments(
+        episode,
+        FieldPolicy(
+            policy_version="field-policy-test-0.2.0",
+            tool_description_action=FieldAction.TRANSLATE,
+            parameter_description_action=FieldAction.TRANSLATE,
+            argument_policies=[
+                ArgumentPathPolicy(
+                    tool_name="*",
+                    argument_pointer="/*",
+                    action=FieldAction.COPY_EXACT,
+                )
+            ],
+        ),
+    )
+
+    pointers = [segment.json_pointer for segment in extraction.segments]
+    assert "/conversation/1/tool_calls/0/function/arguments/city" not in pointers
+    assert "/tools/0/function/description" in pointers
+    assert "/tools/0/function/parameters/properties/city/description" in pointers
+
+
+def test_global_argument_fallback_cannot_translate_or_partially_match() -> None:
+    with pytest.raises(ValueError, match="must copy_exact"):
+        FieldPolicy(
+            policy_version="field-policy-test-0.2.0",
+            argument_policies=[
+                ArgumentPathPolicy(
+                    tool_name="*",
+                    argument_pointer="/*",
+                    action=FieldAction.TRANSLATE,
+                )
+            ],
+        )
+    with pytest.raises(ValueError, match="must be exactly"):
+        FieldPolicy(
+            policy_version="field-policy-test-0.2.0",
+            argument_policies=[
+                ArgumentPathPolicy(
+                    tool_name="*",
+                    argument_pointer="/city",
+                    action=FieldAction.COPY_EXACT,
+                )
+            ],
         )
 
 

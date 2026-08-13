@@ -85,11 +85,24 @@ class FieldPolicy(StrictModel):
         keys = [(item.tool_name, item.argument_pointer) for item in self.argument_policies]
         if len(set(keys)) != len(keys):
             raise ValueError("argument policies must be unique by tool name and pointer")
+        for item in self.argument_policies:
+            is_global_fallback = (item.tool_name, item.argument_pointer) == ("*", "/*")
+            uses_reserved_token = item.tool_name == "*" or item.argument_pointer == "/*"
+            if uses_reserved_token and not is_global_fallback:
+                raise ValueError("the reserved argument fallback must be exactly */*")
+            if is_global_fallback and item.action is not FieldAction.COPY_EXACT:
+                raise ValueError("the global argument fallback must copy_exact")
         return self
 
     def argument_action(self, tool_name: str, argument_pointer: str) -> FieldAction | None:
         for item in self.argument_policies:
             if item.tool_name == tool_name and item.argument_pointer == argument_pointer:
+                return item.action
+        # ``*`` / ``/*`` is the sole reviewed global fallback.  The model
+        # validator limits it to copy_exact, so an uncovered argument can
+        # never become provider input through this path.
+        for item in self.argument_policies:
+            if (item.tool_name, item.argument_pointer) == ("*", "/*"):
                 return item.action
         return None
 

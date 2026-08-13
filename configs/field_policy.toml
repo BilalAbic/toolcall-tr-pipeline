@@ -1,8 +1,14 @@
 schema_version = "field-policy-0.1.0"
-policy_version = "field-policy-0.1.0"
 
-# Natural-language conversation content is eligible for local extraction.
-# Tool descriptions and all argument values require an explicit, reviewed policy.
-tool_description_action = "manual_policy_required"
-parameter_description_action = "manual_policy_required"
-argument_policies = []
+# Reviewed real-source policy:
+# - translate natural-language tool and parameter descriptions;
+# - preserve every tool-call argument byte-for-byte unless an exact named
+#   argument path receives a separate reviewed translation policy.
+policy_version = "field-policy-real-source-0.2.0"
+tool_description_action = "translate"
+parameter_description_action = "translate"
+
+[[argument_policies]]
+tool_name = "*"
+argument_pointer = "/*"
+action = "copy_exact"

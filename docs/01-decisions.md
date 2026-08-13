@@ -122,11 +122,13 @@ SQLite, DuckDB ve başka bir veritabanı v1 kapsamı dışındadır. Performans 
 
 ## 6. Model rolleri
 
-Model adları kod içine dağılmaz; sürümlü run config'inde tutulur.
+Model adları kod içine dağılmaz; sürümlü run config'inde tutulur. `2026-08-13`
+itibarıyla config allow-list'i resmî provider kataloglarındaki model kimlikleriyle
+eşleşir; bu, her hesabın kota/erişim yetkisini garanti etmez.
 
-- Çevirici: güncel DeepSeek Flash modeli; başlangıçta thinking kapalı, sıcaklık 0.
-- Güçlü semantik yargıç: GPT-5.4 sınıfı model.
-- Dar adversarial doğrulayıcı: GPT-5.4-mini sınıfı model.
+- Çevirici: [`deepseek-v4-flash`](https://api-docs.deepseek.com/news/news260424/) ; başlangıçta thinking kapalı, sıcaklık 0. `deepseek-v4-pro` yalnız allow-list'li alternatifidir.
+- Güçlü semantik yargıç: [`gpt-5.4`](https://developers.openai.com/api/docs/models/gpt-5.4).
+- Dar adversarial doğrulayıcı: [`gpt-5.4-mini`](https://developers.openai.com/api/docs/models/gpt-5.4-mini).
 - Terminoloji araştırmacısı: mini model + web search; çelişki halinde güçlü modele veya insana yükseltme.
 - Challenger: daha yeni model ancak frozen eval setinde üstünlük kanıtlandıktan sonra terfi eder.
 

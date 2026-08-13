@@ -37,17 +37,17 @@ Her JSON Pointer yolu aşağıdaki sınıflardan birine girer:
 | Alan | Politika |
 |---|---|
 | user/assistant doğal dil `content` | `translate` |
-| tool/function `description` | `translate_if_natural_language` |
-| parameter `description` | `translate_if_natural_language` |
+| tool/function `description` | `translate` |
+| parameter `description` | `translate` |
 | function/parameter adı, role, ID | `copy_exact` |
 | enum/default/type/required | `copy_exact` |
 | call/message sırası | `omit_from_model_input` + host merge |
 | argument ID/URL/path/enum/number/boolean | `copy_exact` |
 | açıkça serbest metin olarak onaylanmış argument path | `translate` |
-| kişi/yer/adres/tarih veya belirsiz argument path | `manual_policy_required` |
+| policy'de adı geçmeyen herhangi bir argument path | gözden geçirilmiş global fallback: `copy_exact` |
 | reasoning/thinking | kaynakta yoksa `null`, üretilmez |
 
-Argument değerleri için kör “hepsini çevir” veya “hepsini kopyala” yoktur. Schema formatı, enum üyeliği ve path-bazlı gözden geçirilmiş policy karar verir. Policy'si çözülmemiş kayıt translated sayılamaz. Bu yapı bir sözcük sözlüğü değil, alanın veri tipini ve işlevini tanımlayan sürümlü bir sözleşmedir.
+Argument değerleri varsayılan olarak modele gönderilmez: `configs/field_policy.toml` içindeki tek izinli global fallback `*` / `/*` yalnız `copy_exact` olabilir. Bir argument ancak isimli tool + exact JSON Pointer ile ayrıca gözden geçirilip `translate` yapılabilir; schema formatı, enum üyeliği ve path güvenlik denetimi yine uygulanır. Böylece gerçek tool kayıtları eksik policy nedeniyle durmaz, fakat teknik veya kullanıcı girdisi niteliğindeki argumentlar yanlışlıkla çevrilmez. Bu yapı bir sözcük sözlüğü değil, alanın veri tipini ve işlevini tanımlayan sürümlü bir sözleşmedir.
 
 ## 3. Çevirici system prompt katmanları
 

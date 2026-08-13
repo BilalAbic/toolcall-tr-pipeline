@@ -4,7 +4,27 @@ Bu proje, İngilizce tool-calling ve no-tool konuşma verilerini yüksek kalitel
 
 Kod deposu: [BilalAbic/toolcall-tr-pipeline](https://github.com/BilalAbic/toolcall-tr-pipeline).
 
-Şu anki durum: **Faz 1–5 veri hattı ile fail-closed canlı çeviri ve judge operasyon yüzeyleri uygulanmıştır**. ID-first ingest, strict sözleşmeler, diagnostic catalog, JSONL artifact/event altyapısı, canonicalizer, tool registry, source-evidence, audit ve insan-kapılı S400 selection freeze çalışır durumdadır. `pilot run`, kaynağı değiştirmeden snapshot → ingest → canonical → audit zincirini işletir; reviewer JSONL kararları append-only zincire eklenir, release yalnız açık insan Gold kabulüyle oluşur. `translate` yalnız açık canonical JSONL'nin policy-izinli leaf'lerini işler; `evaluation run` yalnız tam-leaf hash'li girdileri judge eder ve Gold üretemez. Canlı katman; DeepSeek V4 Chat Completions çeviricisini ve OpenAI Responses structured-output judge'ını ayrı adapterlarda, allow-list'li `.env` resolver, HTTPS/no-redirect transport, secret/PII/local-path preflight ve hash-only attempt provenance ile bağlar. Sabit sentetik smoke'lar ile 3 episode'luk çeviri batch'i ve 1 girdilik judge batch'i canlıda geçti. NVIDIA When2Call ve Salesforce xLAM 60k gerçek kaynakları revision-pinned, modelsiz pilotlardan geçti; insan kararı, training render, gerçek kaynak model egress'i veya release üretilmedi.
+## Özet
+
+Faz 1–5 veri hattı, fail-closed canlı çeviri ve judge operasyon yüzeyleri uygulanmıştır. `pilot run`, kaynağı değiştirmeden snapshot → ingest → canonical → audit zincirini yürütür; `translate` yalnız policy-izinli doğal dil leaf'lerini işler; `evaluation run` Gold üretemez. Her Gold/release kaydı açık insan kabuluna bağlıdır.
+
+| Alan | Mevcut durum |
+|---|---|
+| Kaynak pilotları | When2Call ve xLAM 60k revision-pinned, modelsiz işlendi. |
+| Policy coverage | 85.111 canonical episode, 849.064 çeviri segmenti, 0 unresolved policy error. |
+| Canlı provider | DeepSeek çeviri ve OpenAI judge yalnız sentetik smoke girdileriyle doğrulandı. |
+| Gerçek kaynak egress / Gold | İnsan review, adjudication ve selection tamamlanana kadar kapalı. |
+
+## Tasarım referansları
+
+Bu bağımsız pipeline, aşağıdaki kardeş depolardan tasarım desteği alır. Kaynak
+snapshotları veya onların eğitim verileri bu depoya kopyalanmaz; burada yalnız
+uyarlanmış ve yeniden test edilmiş sözleşmeler uygulanır.
+
+- [turkish-tool-calling-dataset](https://github.com/BilalAbic/turkish-tool-calling-dataset): aşamalı `S30 → S100 → S250 → S400` seçim yaklaşımı, tekrar-önleme/append-only ledger fikri, teknik alanların deterministik korunması ve çok kapılı kalite akışı için referans oldu.
+- [magibu-toolcall](https://github.com/BilalAbic/magibu-toolcall): schema-first registry ve canonical audit yaklaşımı, provenance odaklı kayıtlar, teknik alanların modelden bağımsız doğrulanması ve insan kabulunun model kararından ayrı tutulması için referans oldu.
+
+Bu projede bu ilkeler; içerik-adresli artifactlar, hash zincirli event logu, strict JSON Schema, host-side merge, insan-kapılı selection/release ve kapsamlı testlerle uygulanmıştır.
 
 Uygulanan yüzey ile planlanan sonraki fazların kesin ayrımı için [uygulama durumuna](docs/06-implementation-status.md) bakın.
 Gerçek kaynak revision/hash/pilot sayımları için [kaynak pilot kayıtlarına](docs/07-source-pilots.md) bakın.
@@ -97,6 +117,8 @@ Pilot geçmeden çeviri veya Gold release açılmaz. Human-review ve release kom
 2026-08-13'te [NVIDIA When2Call](https://huggingface.co/datasets/nvidia/When2Call) revision `0582f7749df63a96fdc3070932e83e72396ace53` altındaki tüm erişilebilir veri split'leri salt-okunur pilotta işlendi. `train/sft` ve `train/pref` içindeki seçilmiş assistant hedefleri artık dahil edilir: açık `<TOOLCALL>` işaretleri, açık ek-bilgi istemleri ve açık tool-unavailable metinleri canonical'a alınır; belirsiz veya schema/argument açısından geçersiz kayıtlar karantinada kalır. 27.952 satırdan 27.393 canonical survivor üretildi; 559 gerekçeli karantina var. Dört split birlikte 2.917 exact duplicate group ve 136 human-review conflict adayı üretti. Bu modelsiz bir işlemdir; hiçbir gerçek kaynak satırı provider'a gönderilmedi, Gold/release veya insan kararı üretilmedi.
 
 Kullanıcının Hugging Face gated erişimiyle [Salesforce xLAM 60k](https://huggingface.co/datasets/Salesforce/xlam-function-calling-60k) train kaynağı revision `26d14ebfe18b1f7b524bd39b404b50af5dc97866` ile indirildi. 96.1 MB JSON dizi, tam dosya hash'i bağlı immutable JSONL'ye dönüştürüldü ve tamamı modelsiz pilotta işlendi: 60.000 source-valid satırdan 57.718 canonical kayıt, 2.282 gerekçeli karantina ve insan review bekleyen 6 hard-conflict adayı oluştu. Kaynak veya karantina kayıtları düzeltilmedi; gerçek kaynak içeriği provider'a gönderilmedi.
+
+Gözden geçirilmiş field policy, When2Call+xLAM toplam 85.111 canonical episode üzerinde ağsız doğrulandı: 849.064 çevrilebilir segment ve 0 çözülmemiş policy hatası. Tool/parameter açıklamaları çevrilebilir; tüm tanımsız argument path'leri `copy_exact` kalır ve modele gönderilmez. İnsan review/selection kapıları geçilmediği için gerçek kaynak egress'i hâlâ kapalıdır.
 
 Pilot ve selection kapıları geçtikten sonra sınırlı bir batch için canlı adımlar şunlardır:
 

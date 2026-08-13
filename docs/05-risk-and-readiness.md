@@ -53,7 +53,7 @@ Gerçek kaynak üzerinde tamamlanan kanıt:
 
 Gerçek kaynak üzerinde açık kapı:
 
-- [ ] Karantina örnekleri ve xLAM'daki 6 hard conflict yetkili insan tarafından kaynak kurallarına göre adjudicate edilmeli; hiçbir kayıt otomatik onarılmamalı.
+- [ ] When2Call'daki 559 ve xLAM'daki 2.282 karantina ile When2Call'daki 136 ve xLAM'daki 6 unresolved conflict, yetkili insan tarafından kaynak kurallarına göre adjudicate edilmeli; hiçbir kayıt otomatik onarılmamalı.
 - [ ] Her canonical araç argümanı için gerçek source-evidence Pass 1 ve insan `source_valid` kararları üretilmeli.
 - [ ] Faz 4–7 S400 membership, gerçek renderer/loss-mask ve insan review kapıları tamamlanmalı.
 
