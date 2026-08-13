@@ -1,0 +1,419 @@
+{
+  "$defs": {
+    "CanonicalTool": {
+      "additionalProperties": false,
+      "properties": {
+        "documentation_hash": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Documentation Hash",
+          "type": "string"
+        },
+        "function": {
+          "$ref": "#/$defs/ToolFunction"
+        },
+        "normalizer_version": {
+          "const": "0.1.0",
+          "default": "0.1.0",
+          "title": "Normalizer Version",
+          "type": "string"
+        },
+        "raw_schema_hash": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Raw Schema Hash",
+          "type": "string"
+        },
+        "semantic_schema_hash": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Semantic Schema Hash",
+          "type": "string"
+        },
+        "tool_id": {
+          "pattern": "^tool_[0-9a-f]{64}$",
+          "title": "Tool Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "function",
+          "default": "function",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_id",
+        "raw_schema_hash",
+        "semantic_schema_hash",
+        "documentation_hash",
+        "function"
+      ],
+      "title": "CanonicalTool",
+      "type": "object"
+    },
+    "FunctionCall": {
+      "additionalProperties": false,
+      "properties": {
+        "arguments": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Arguments",
+          "type": "object"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "arguments"
+      ],
+      "title": "FunctionCall",
+      "type": "object"
+    },
+    "ImageRef": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "minimum": 0,
+          "title": "Anchor",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "mime_type": {
+          "minLength": 1,
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "uri",
+        "mime_type",
+        "sha256",
+        "width",
+        "height",
+        "anchor"
+      ],
+      "title": "ImageRef",
+      "type": "object"
+    },
+    "JsonScalar": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonScalar"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "Message": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Content"
+        },
+        "images": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ImageRef"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Images"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name"
+        },
+        "reasoning_content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reasoning Content"
+        },
+        "role": {
+          "$ref": "#/$defs/Role"
+        },
+        "thinking": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Thinking"
+        },
+        "tool_call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tool Call Id"
+        },
+        "tool_calls": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ToolCall"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tool Calls"
+        }
+      },
+      "required": [
+        "role",
+        "content",
+        "reasoning_content",
+        "thinking",
+        "tool_calls",
+        "images",
+        "name",
+        "tool_call_id"
+      ],
+      "title": "Message",
+      "type": "object"
+    },
+    "Role": {
+      "enum": [
+        "system",
+        "developer",
+        "user",
+        "assistant",
+        "tool"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "ToolCall": {
+      "additionalProperties": false,
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/FunctionCall"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "function",
+          "default": "function",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "function"
+      ],
+      "title": "ToolCall",
+      "type": "object"
+    },
+    "ToolFunction": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Description"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Parameters",
+          "type": "object"
+        },
+        "strict": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Strict"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "parameters",
+        "strict"
+      ],
+      "title": "ToolFunction",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One JSONL row directly loadable as a nested tool-calling dataset.",
+  "properties": {
+    "consensus_status": {
+      "const": "two_judge_pass",
+      "default": "two_judge_pass",
+      "title": "Consensus Status",
+      "type": "string"
+    },
+    "human_approval_required": {
+      "const": true,
+      "default": true,
+      "title": "Human Approval Required",
+      "type": "boolean"
+    },
+    "id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "messages": {
+      "items": {
+        "$ref": "#/$defs/Message"
+      },
+      "title": "Messages",
+      "type": "array"
+    },
+    "quality_tier": {
+      "const": "silver_candidate",
+      "default": "silver_candidate",
+      "title": "Quality Tier",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "hf-tool-calling-row-0.1.0",
+      "default": "hf-tool-calling-row-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_dataset_namespace": {
+      "title": "Source Dataset Namespace",
+      "type": "string"
+    },
+    "source_snapshot_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Snapshot Ids",
+      "type": "array"
+    },
+    "tools": {
+      "items": {
+        "$ref": "#/$defs/CanonicalTool"
+      },
+      "title": "Tools",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "messages",
+    "tools",
+    "source_dataset_namespace",
+    "source_snapshot_ids"
+  ],
+  "title": "HuggingFaceDatasetRow",
+  "type": "object"
+}

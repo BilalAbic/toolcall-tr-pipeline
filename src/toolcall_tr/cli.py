@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 from pydantic import ValidationError
@@ -13,8 +13,16 @@ from rich.table import Table
 
 from toolcall_tr.adapters import get_adapter
 from toolcall_tr.adjudication import ConflictAdjudication, ConflictAdjudicationLog
-from toolcall_tr.artifacts import publish_bytes_atomic, publish_jsonl_artifact
+from toolcall_tr.artifacts import ContentManifest, publish_bytes_atomic, publish_jsonl_artifact
 from toolcall_tr.audit import ExactConflictAudit, audit_exact_conflicts
+from toolcall_tr.autonomous_pipeline import (
+    AutonomousPipelineError,
+    build_automation_consensus,
+    build_huggingface_review_package,
+    prepare_automation_candidates,
+    prepare_automation_evaluation_inputs,
+    run_automation_translation,
+)
 from toolcall_tr.canonicalize import canonicalize as canonicalize_record
 from toolcall_tr.config import PipelineConfig, inspect_config, load_config, load_live_config
 from toolcall_tr.credentials import AllowListedSecretResolver, CredentialResolutionError
@@ -34,6 +42,7 @@ from toolcall_tr.hashing import JsonValue, canonical_bytes, sha256_bytes
 from toolcall_tr.human_review_log import HumanEvaluationReviewLog
 from toolcall_tr.jsonio import StrictJsonError, iter_jsonl, loads_strict_bytes
 from toolcall_tr.live_evaluation import (
+    JudgeFactory,
     LiveEvaluationConfigurationError,
     LiveEvaluationRuntimeError,
     run_live_evaluation,
@@ -96,6 +105,9 @@ provider_app = typer.Typer(help="Safe provider configuration inspection commands
 pilot_app = typer.Typer(help="Fail-closed, provider-free operational pilot commands.")
 evaluation_app = typer.Typer(help="Explicit, human-gated live OpenAI evaluation commands.")
 canary_app = typer.Typer(help="Bounded pre-review prompt and provider canary commands.")
+automation_app = typer.Typer(
+    help="Bounded, resumable live candidate automation with fallback and two-judge consensus."
+)
 
 app.add_typer(source_app, name="source")
 app.add_typer(registry_app, name="registry")
@@ -110,6 +122,7 @@ app.add_typer(provider_app, name="provider")
 app.add_typer(pilot_app, name="pilot")
 app.add_typer(evaluation_app, name="evaluation")
 app.add_typer(canary_app, name="canary")
+app.add_typer(automation_app, name="automation")
 console = Console()
 
 _DEFAULT_PIPELINE_CONFIG = Path("configs/pipeline.toml")
@@ -735,6 +748,267 @@ def canary_evaluation_inputs(
         "[green]pre-review evaluation inputs published[/green] "
         f"manifest={manifest.manifest_id} rows={manifest.artifacts[0].row_count} "
         "gold_release_allowed=false"
+    )
+
+
+def _manifest_jsonl(root: Path, manifest_id: str) -> Path:
+    """Resolve exactly one content-manifest descriptor to its local JSONL."""
+    manifest_path = root / f"{manifest_id}.json"
+    manifest = ContentManifest.model_validate_json(
+        manifest_path.read_text(encoding="utf-8"), strict=True
+    )
+    if len(manifest.artifacts) != 1:
+        raise AutonomousPipelineError("automation stage must publish exactly one JSONL artifact")
+    path = root / manifest.artifacts[0].relative_path
+    if not path.is_file() or path.suffix.lower() != ".jsonl":
+        raise AutonomousPipelineError("automation manifest does not resolve to a JSONL artifact")
+    return path
+
+
+@automation_app.command("run")
+def automation_run(
+    canonical_jsonl: Annotated[list[Path], typer.Argument(exists=True, dir_okay=False)],
+    output: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--output",
+            help=(
+                "Required disjoint root for candidates, attempts, consensus, "
+                "and the HF review package."
+            ),
+        ),
+    ],
+    conflict_audit_json: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--conflict-audit",
+            exists=True,
+            dir_okay=False,
+            help="Repeatable exact-conflict-audit JSON input.",
+        ),
+    ] = None,
+    config: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--config",
+            help="Required non-default live config with DeepSeek and OpenAI credentials declared.",
+        ),
+    ] = _DEFAULT_PIPELINE_CONFIG,
+    field_policy: Annotated[
+        Path,
+        typer.Option("--field-policy", exists=True, dir_okay=False),
+    ] = Path("configs/field_policy.toml"),
+    prompt: Annotated[
+        Path,
+        typer.Option("--prompt", exists=True, dir_okay=False),
+    ] = Path("configs/prompt_bundle.toml"),
+    episodes: Annotated[
+        int,
+        typer.Option("--episodes", min=1, max=1_000, help="Bounded number of canonical episodes."),
+    ] = 1_000,
+    max_segments: Annotated[
+        int,
+        typer.Option(
+            "--max-segments",
+            min=1,
+            help="Hard cap on provider-visible natural-language leaves for this run.",
+        ),
+    ] = 10_000,
+    source_row_cap: Annotated[
+        int | None,
+        typer.Option(
+            "--source-row-cap",
+            min=1,
+            help=(
+                "Optional deterministic per-input source window for a bounded canary; "
+                "omit for full-corpus selection."
+            ),
+        ),
+    ] = None,
+    workers: Annotated[
+        int,
+        typer.Option(
+            "--workers",
+            min=1,
+            max=16,
+            help="Maximum concurrent independent translation or judge calls.",
+        ),
+    ] = 4,
+    live: Annotated[
+        bool,
+        typer.Option(
+            "--live", help="Explicitly permit the bounded translation and judge requests."
+        ),
+    ] = False,
+) -> None:
+    """Produce a two-judge-passing, upload-ready HF JSONL review package.
+
+    The runner selects only conflict-free, source-explicit, policy-covered
+    canonical episodes. It continues after per-episode failure, changes from
+    DeepSeek Flash to Pro only for known safe terminal failures, and never
+    automatically resends an uncertain network delivery. The resulting HF
+    directory remains ``pending_human_approval`` and cannot claim Gold.
+    """
+    if not live:
+        console.print(
+            "[yellow]automation run requires --live; no provider request was made.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    if _is_default_pipeline_config(config):
+        console.print(
+            "[yellow]automation run requires an explicit non-default --config path; "
+            "no provider request was made.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    if not conflict_audit_json:
+        console.print(
+            "[yellow]automation run requires at least one --conflict-audit; "
+            "no provider request was made.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    try:
+        live_config = load_live_config(config)
+        translator = live_config.providers.translator
+        if translator.provider != "deepseek" or translator.endpoint is None:
+            raise AutonomousPipelineError("automation requires an explicit DeepSeek translator")
+        judge_roles = (live_config.providers.mini_verifier, live_config.providers.strong_judge)
+        if any(role.provider != "openai" or role.endpoint is None for role in judge_roles):
+            raise AutonomousPipelineError(
+                "automation requires explicit OpenAI mini and strong judges"
+            )
+        resolver = AllowListedSecretResolver(
+            allowed_names=frozenset(
+                {translator.api_key_env, *(role.api_key_env for role in judge_roles)}
+            ),
+            env_file=_LOCAL_ENV_FILE,
+        )
+        candidate_root = output / "candidate"
+        candidate = prepare_automation_candidates(
+            canonical_jsonl,
+            conflict_audit_json,
+            candidate_root,
+            field_policy=load_field_policy(field_policy),
+            requested_episode_count=episodes,
+            max_translatable_segments=max_segments,
+            source_row_cap=source_row_cap,
+        )
+        candidate_jsonl = _manifest_jsonl(
+            candidate_root / "canonical", candidate.canonical_manifest_id
+        )
+        policy = load_field_policy(field_policy)
+        prompt_bundle = load_prompt_bundle(prompt)
+        translation = run_automation_translation(
+            candidate_jsonl,
+            output / "translation",
+            config=live_config,
+            field_policy=policy,
+            prompt=prompt_bundle,
+            transport=StdlibJsonTransport(
+                credential_name=translator.api_key_env,
+                secret_lookup=resolver.resolve,
+            ),
+            max_workers=workers,
+        )
+        translation_jsonl = _manifest_jsonl(
+            output / "translation" / "translation-results", translation.result_manifest_id
+        )
+        if translation.translated_records == 0:
+            console.print(
+                "[yellow]automation completed without translated records[/yellow] "
+                f"candidates={translation.source_records} needs_review="
+                f"{translation.needs_review_records}; no judge or HF package was produced"
+            )
+            return
+        inputs = prepare_automation_evaluation_inputs(
+            candidate_jsonl,
+            translation_jsonl,
+            output / "evaluation-inputs",
+            field_policy=policy,
+        )
+        inputs_jsonl = output / "evaluation-inputs" / inputs.artifacts[0].relative_path
+
+        def judge_factory(
+            role_name: Literal["mini_verifier", "strong_judge"],
+        ) -> JudgeFactory:
+            role = (
+                live_config.providers.mini_verifier
+                if role_name == "mini_verifier"
+                else live_config.providers.strong_judge
+            )
+            transport = StdlibJsonTransport(
+                credential_name=role.api_key_env,
+                secret_lookup=resolver.resolve,
+            )
+
+            def factory(attempt_sink: ProviderAttemptSink) -> OpenAIResponsesJudge:
+                return OpenAIResponsesJudge(
+                    config=live_config,
+                    role_name=role_name,
+                    transport=transport,
+                    attempt_sink=attempt_sink,
+                )
+
+            return factory
+
+        mini = run_live_evaluation(
+            inputs_jsonl,
+            output / "mini-judge",
+            config=live_config,
+            role_name="mini_verifier",
+            run_id=f"{candidate.candidate_id}-mini",
+            judge_factory=judge_factory("mini_verifier"),
+            max_workers=workers,
+        )
+        strong = run_live_evaluation(
+            inputs_jsonl,
+            output / "strong-judge",
+            config=live_config,
+            role_name="strong_judge",
+            run_id=f"{candidate.candidate_id}-strong",
+            judge_factory=judge_factory("strong_judge"),
+            max_workers=workers,
+        )
+        mini_jsonl = (
+            output / "mini-judge" / "results" / mini.results_manifest.artifacts[0].relative_path
+        )
+        strong_jsonl = (
+            output / "strong-judge" / "results" / strong.results_manifest.artifacts[0].relative_path
+        )
+        consensus = build_automation_consensus(mini_jsonl, strong_jsonl, output / "consensus")
+        consensus_jsonl = _manifest_jsonl(
+            output / "consensus" / "consensus", consensus.consensus_manifest_id
+        )
+        package = build_huggingface_review_package(
+            candidate_jsonl,
+            translation_jsonl,
+            consensus_jsonl,
+            output / "hf-review-package",
+            field_policy=policy,
+        )
+    except (
+        AutonomousPipelineError,
+        CredentialResolutionError,
+        LiveEvaluationConfigurationError,
+        LiveEvaluationRuntimeError,
+        OperationalTranslationError,
+        ProviderAdapterError,
+        SecureTransportError,
+        StrictJsonError,
+        ValidationError,
+        ValueError,
+    ) as exc:
+        console.print(f"[red]automation refused or failed:[/red] {type(exc).__name__}")
+        raise typer.Exit(code=2) from exc
+    console.print(
+        "[green]automation completed[/green] "
+        f"candidates={translation.source_records} translated={translation.translated_records} "
+        f"needs_review={translation.needs_review_records} "
+        f"fallback_routes={translation.fallback_routes} "
+        f"two_judge_pass_units={consensus.accepted_units} "
+        f"hf_review_rows={package.review_ready_records} status={package.status} "
+        f"package={output / 'hf-review-package' / package.package_id}"
     )
 
 

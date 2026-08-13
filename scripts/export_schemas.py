@@ -8,6 +8,17 @@ from pathlib import Path
 from toolcall_tr.adjudication import ConflictAdjudication
 from toolcall_tr.artifacts import ContentManifest
 from toolcall_tr.audit import ConflictCandidate, ExactConflictAudit, ExactDuplicateGroup
+from toolcall_tr.autonomous_pipeline import (
+    AutomationCandidateManifest,
+    AutomationCandidateMember,
+    AutomationConsensus,
+    AutomationConsensusReport,
+    AutomationEpisodeResult,
+    AutomationRoute,
+    AutomationTranslationReport,
+    HuggingFaceDatasetRow,
+    HuggingFaceReviewPackage,
+)
 from toolcall_tr.constants import JSON_SCHEMA_DIALECT
 from toolcall_tr.diagnostics import Diagnostic, DiagnosticCatalog
 from toolcall_tr.egress_guard import EgressRequest, EgressViolation, PreEgressDecision
@@ -108,6 +119,13 @@ from toolcall_tr.translation_memory import MemoryLookupKey, SegmentMemoryEntry
 MODELS = {
     "bronze-record.schema.json": BronzeRecord,
     "canonical-episode.schema.json": CanonicalEpisode,
+    "autonomous-candidate.schema.json": AutomationCandidateManifest,
+    "autonomous-candidate-member.schema.json": AutomationCandidateMember,
+    "autonomous-consensus.schema.json": AutomationConsensus,
+    "autonomous-consensus-report.schema.json": AutomationConsensusReport,
+    "autonomous-route.schema.json": AutomationRoute,
+    "autonomous-translation-result.schema.json": AutomationEpisodeResult,
+    "autonomous-translation.schema.json": AutomationTranslationReport,
     "argument-path-policy.schema.json": ArgumentPathPolicy,
     "conflict-adjudication.schema.json": ConflictAdjudication,
     "conflict-candidate.schema.json": ConflictCandidate,
@@ -126,6 +144,8 @@ MODELS = {
     "gold-acceptance.schema.json": GoldAcceptance,
     "human-evaluation-review.schema.json": HumanEvaluationReview,
     "human-evaluation-review-entry.schema.json": HumanEvaluationReviewEntry,
+    "hf-dataset-row.schema.json": HuggingFaceDatasetRow,
+    "hf-review-package.schema.json": HuggingFaceReviewPackage,
     "model-evaluation-verdict.schema.json": ModelEvaluationVerdict,
     "mqm-finding.schema.json": MqmFinding,
     "outcome-summary.schema.json": OutcomeSummary,

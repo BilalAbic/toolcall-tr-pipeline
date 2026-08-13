@@ -254,7 +254,7 @@ Durum: **uygulanmadı.**
 
 ## Faz 9 — JSONL release ve isteğe bağlı Parquet/HF doğrulama
 
-Durum: **uygulanmadı; release veya Hugging Face/Parquet çıktısı yoktur.**
+Durum: **kısmen uygulandı; hashli HF JSONL review package ve Dataset Card üretilir, ancak Gold/release, Parquet round-trip ve Hugging Face publish yoktur.**
 
 Release çıktıları:
 
@@ -294,7 +294,7 @@ Tamamlanan temel Faz 1–5 altyapısı ve sınırlı canlı operasyon yüzeyidir
 7. property-based testler,
 8. `inspect` ve `stats` CLI'sı.
 
-Gerçek çeviri/judge API kanıtı sentetik smoke ile source-explicit/conflict-free 3 episode / 20 leaf pre-review canary sınırındadır. Kimlik, veri formatı, immutable publish ve temel tekrar-almama garantileri fixture/property testleriyle doğrulanır; iki gerçek kaynak için tam canonical/karantina muhasebesi modelsiz pilotta tamamlanmıştır.
+Gerçek çeviri/judge API kanıtı; sentetik smoke, source-explicit/conflict-free 3 episode / 20 leaf pre-review canary ve 50 canonical adaylık bounded automation koşusunu içerir. Son koşu 46 translation, 456 two-judge-pass leaf ve 12 satırlık `pending_human_approval` HF JSONL review package üretti; Gold veya publish yapmadı. Kimlik, veri formatı, immutable publish ve tekrar-almama garantileri fixture/property testleriyle doğrulanır; iki gerçek kaynak için tam canonical/karantina muhasebesi modelsiz pilotta tamamlanmıştır.
 
 ## Plan değişiklik kuralı
 

@@ -9,6 +9,7 @@ triage evidence; it cannot produce a Gold acceptance or a human-review event.
 from __future__ import annotations
 
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Literal
@@ -288,6 +289,7 @@ def run_live_evaluation(
     role_name: str,
     run_id: str,
     judge_factory: JudgeFactory,
+    max_workers: int = 1,
 ) -> LiveEvaluationRunArtifacts:
     """Judge every strict input row once and publish only immutable receipts.
 
@@ -299,15 +301,19 @@ def run_live_evaluation(
     """
     if not run_id.strip():
         raise LiveEvaluationConfigurationError("live evaluation run_id must be non-empty")
+    if not 1 <= max_workers <= 16:
+        raise LiveEvaluationConfigurationError(
+            "live evaluation worker count must be between 1 and 16"
+        )
     role = _validate_live_judge_config(config, role_name)
     input_path, resolved_output = _validate_boundaries(input_jsonl, output_root)
     input_bytes = input_path.read_bytes()
     input_sha256 = sha256_bytes(input_bytes)
     inputs = _read_inputs(input_path)
 
-    results: list[LiveEvaluationResult] = []
-    attempts: list[ProviderAttemptRecord] = []
-    for item in inputs:
+    def evaluate_item(
+        item: LiveEvaluationInput,
+    ) -> tuple[LiveEvaluationResult, ProviderAttemptRecord]:
         row_attempts: list[ProviderAttemptRecord] = []
         judge = judge_factory(row_attempts.append)
         verdict: ModelEvaluationVerdict | None = None
@@ -325,8 +331,15 @@ def run_live_evaluation(
                 "live judge did not emit exactly one terminal attempt record"
             )
         attempt = row_attempts[0]
-        results.append(_build_result(item=item, attempt=attempt, verdict=verdict))
-        attempts.append(attempt)
+        return _build_result(item=item, attempt=attempt, verdict=verdict), attempt
+
+    if max_workers == 1:
+        evaluated = [evaluate_item(item) for item in inputs]
+    else:
+        with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="tcdata-judge") as pool:
+            evaluated = list(pool.map(evaluate_item, inputs))
+    results = [result for result, _ in evaluated]
+    attempts = [attempt for _, attempt in evaluated]
 
     result_ids = [result.result_id for result in results]
     if len(result_ids) != len(set(result_ids)):

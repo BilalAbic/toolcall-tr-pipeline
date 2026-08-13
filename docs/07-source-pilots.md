@@ -12,15 +12,34 @@ içermez. Kaynak snapshotları `sources/`, türetilmiş JSONL ve pilot kanıtlar
 - Her kaynak değişmeden okunmuş, pilot yayınından hemen önce yeniden hash'lenmiştir.
 - Pilot zinciri: snapshot → strict ingest → canonicalize/karantina → exact audit.
 - Pilot koşularında kayıt onarımı, insan adjudication, source-evidence promotion,
-  S400 seçimi, provider egress'i ve Gold/release yapılmamıştır. Pilotlardan
-  sonra yalnız source-explicit, policy-covered ve conflict-free 3 episode / 20
-  leaf pre-review canary'e explicit provider egress'i yapılmıştır; bu canary
-  hiçbir pilot sonucunu, kararını veya üyeliğini değiştirmez.
+  S400 seçimi ve Gold/release yapılmamıştır. Pilotlardan sonra yalnız
+  source-explicit, policy-covered, conflict-free/alias-dışı candidate cohort'a
+  explicit provider egress'i yapılmıştır; bu koşular hiçbir pilot sonucunu,
+  kararını veya üyeliğini değiştirmez.
 - `blocked` sonucu bir hata gizlemez: aşağıdaki karantina veya conflict kanıtı
   çözülmeden sonraki kapı açılmaz.
 - Bu kanıtlar 2026-08-13'te `review prepare` ile karar üretmeden sıralı yerel
   worklist'e dönüştürüldü; kaynak satırı, credential veya reviewer kararı
   worklist'e yazılmadı.
+
+## Bounded automation canlı koşusu
+
+2026-08-13'te `automation run`, When2Call ve xLAM canonical artifactlarının
+her birinde deterministic ilk 500 source-row penceresinden 50 source-explicit,
+policy-covered, conflict-free/alias-dışı episode seçti. Bu pencere ve 600-leaf
+üst sınırı candidate manifestine bağlandı; kaynak satırları değişmedi.
+
+| Aşama | Sonuç |
+|---|---|
+| Candidate | 50 episode / 599 policy-izinli leaf; `autocand_7005053d…8a6ac` |
+| Translation | 46 host-merged translation, 4 `needs_review`, 0 fallback route; `autobatch_736eb0cd…57f7d0` |
+| Mini judge | 547 input; 538 result, 9 unavailable; `liveevalrun_6e8da414…05354` |
+| Strong judge | 547 input; 513 result, 34 unavailable; `liveevalrun_a3f4a8a2…28b2` |
+| Consensus | 456 two-judge `pass`, 91 `needs_review`; `autoconsreport_621881ee…a1a90` |
+| HF review package | 12 strict `silver_candidate` JSONL satırı; `hfpackage_1af985da…7c9f7e`; `pending_human_approval` |
+
+Paket yalnız yerel ignore edilmiş artifact kökündedir. `publish_allowed=false`
+olduğu için Gold/release veya Hugging Face upload yapılmamıştır.
 
 ## NVIDIA When2Call
 

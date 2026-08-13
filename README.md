@@ -6,7 +6,7 @@ Kod deposu: [BilalAbic/toolcall-tr-pipeline](https://github.com/BilalAbic/toolca
 
 ## Özet
 
-Faz 1–5 veri hattı, fail-closed canlı çeviri ve judge operasyon yüzeyleri uygulanmıştır. `pilot run`, kaynağı değiştirmeden snapshot → ingest → canonical → audit zincirini yürütür; `translate` yalnız policy-izinli doğal dil leaf'lerini işler; `evaluation run` Gold üretemez. Her Gold/release kaydı açık insan kabuluna bağlıdır.
+Faz 1–5 veri hattı, fail-closed canlı çeviri/judge yüzeyleri ve bounded otomasyon katmanı uygulanmıştır. `pilot run`, kaynağı değiştirmeden snapshot → ingest → canonical → audit zincirini yürütür; `automation run` conflict-free adayları seçer, çevirir, iki bağımsız judge ile değerlendirir ve insan onayı bekleyen Hugging Face JSONL paketi üretir. Her Gold/release kaydı açık insan kabuluna bağlıdır.
 
 | Alan | Mevcut durum |
 |---|---|
@@ -14,6 +14,7 @@ Faz 1–5 veri hattı, fail-closed canlı çeviri ve judge operasyon yüzeyleri 
 | Policy coverage | 85.111 canonical episode, 849.064 çeviri segmenti, 0 unresolved policy error. |
 | İnsan review kuyruğu | 2.983 açık görev yayımlandı: 2.841 canonical karantina ve 142 unresolved conflict. |
 | Pre-review canlı canary | When2Call'dan 3 conflict-free episode / 20 leaf çevrildi; mini judge 20/20 `pass`, 0 finding. |
+| Otomatik canlı 50’lik koşu | 50 gerçek canonical adaydan 46’sı çevrildi; iki judge 456 leaf’te uzlaştı ve 12 satırlık HF review paketi oluştu. |
 | İnsan review / Gold | Model ve deterministik kontrollerden sonra son kabul kapısı; pre-review canary Gold/S400/release üretmez. |
 
 ## Tasarım referansları
@@ -82,15 +83,15 @@ Tek mantıksal veri formatında, her satırı tek bir hedef assistant kararında
 - canlı preflight: payloaddaki secret, PII ve local-path bulgularında transport öncesi ret; sabit synthetic smoke ve küçük, conflict-free pre-review canary için explicit `--live` yürütmesi,
 - explicit `pilot run`: kaynakla kesişmeyen output altında snapshot/ingest/canonical/audit; quarantine veya çözülmemiş conflict olduğunda fail-closed,
 - canonical karantina ve exact-conflict kanıtını sıralı, karar üretmeyen insan review görevlerine dönüştüren `review prepare`; reviewer-authored tek-kayıt JSONL kararını doğrulayan append-only review komutları; Gold release için model verdict + insan kabul bağlantısı zorunlu,
-- hash-only provider attempt kayıtları: ham request/response/credential tutulmaz; otomatik retry bütçesi `0`, geçici hata yalnız manual-retry adayıdır,
+- hash-only provider attempt kayıtları: ham request/response/credential tutulmaz; temel adapter çağrıları tek-attempt’tır. Otomasyon yalnız doğrulanmış response/HTTP transient sınıflarında bir kez Flash → Pro fallback uygular; teslimatı belirsiz ağ hatası yeniden gönderilmez,
 - explicit pre-review canary: source-explicit, policy-covered, conflict-free ve exact-alias dışı en çok 30 episode seçimi; immutable çeviri/judge inputları, otomatik retry, Gold/S400/release veya insan kararı yok,
 - explicit canlı çeviri: policy-izinli leaf başına immutable claim/attempt/checkpoint, kaynak rehash ve host-only merge; otomatik retry, Gold ve release yok,
 - explicit canlı judge: tam-leaf content hash'iyle bağlı strict source/target girdileri, immutable result/attempt manifestleri ve `gold_release_allowed=false`,
 - yalnız enjekte edilmiş renderer ve tokenizer ile çalışan render/loss-mask sözleşmesi: pinli render config, tek final-assistant payload aralığı, teknik yapı hash'i ve truncation/uyuşmazlıkta fail-closed; chat-template veya tokenizer indirme yok,
-- yalnız yerel sentetik JSONL için Gold release-manifest sözleşmesi: sıralı dosya byte-hash/row-count kimliği, episode sırası ve açık insan kabul kimliği doğrulaması; Parquet, Dataset Card, Hugging Face veya yayın işlemi yok,
-- `source register`, `source validate`, `source json-array-to-jsonl`, `source evidence`, `ingest`, `registry build`, `canonicalize`, `audit duplicates`, `audit near-duplicates`, `select freeze`, `pilot run`, `canary prepare`, `canary evaluation-inputs`, `translate`, `evaluation run`, `review prepare`, `review submit-evaluation`, `review submit-conflict`, `release build`, `release validate`, `inspect`, `stats`, `events show` ve `diagnostics` CLI komutları.
+- insan onayı bekleyen Hugging Face review paketi: doğrudan yüklenebilir `data/train.jsonl` (`messages` + `tools`), `dataset_info.json`, Dataset Card ve hashli `manifest.json`; Gold/HF publish yetkisi üretmez,
+- `source register`, `source validate`, `source json-array-to-jsonl`, `source evidence`, `ingest`, `registry build`, `canonicalize`, `audit duplicates`, `audit near-duplicates`, `select freeze`, `pilot run`, `canary prepare`, `canary evaluation-inputs`, `translate`, `evaluation run`, `automation run`, `review prepare`, `review submit-evaluation`, `review submit-conflict`, `release build`, `release validate`, `inspect`, `stats`, `events show` ve `diagnostics` CLI komutları.
 
-Gerçek eval UI, render ve yayın komutları hâlâ kapalıdır. Review/release komutları yalnız dışarıdan sağlanan insan kararlarını doğrular; karar üretmez. Canlı çeviri/judge çağrıları yalnız explicit `--live`, non-default config, ayrı output kökü ve preflight ile gerçekleşir; kaynak dataset asla varsayılan olarak gönderilmez.
+Gerçek eval UI, render ve HF publish komutları hâlâ kapalıdır. Review/release komutları yalnız dışarıdan sağlanan insan kararlarını doğrular; karar üretmez. Canlı çeviri/judge çağrıları yalnız explicit `--live`, non-default config, ayrı output kökü ve preflight ile gerçekleşir; kaynak dataset asla varsayılan olarak gönderilmez.
 
 ## Yerel doğrulama
 
@@ -114,11 +115,11 @@ Kaynak JSONL, revision ve lisans bilgisi hazır olduğunda ilk adım yalnız aş
 uv run tcdata pilot run <source.jsonl> --output <disjoint-output> --dataset <namespace> --revision <revision> --license <license-id> --license-url <license-url> --source-config <config> --source-split <split> --adapter <source-adapter> --run-event-id <run-id>
 ```
 
-Pilot geçmeden çeviri veya Gold release açılmaz. Human-review ve release komutları, gerçek model verdict JSONL ve reviewer tarafından yazılmış tek-kayıt karar JSONL'si gerektirir; bunlar olmadan fail-closed kalır.
+Pilot kanıtı olmadan çeviri veya Gold release açılmaz. `automation run`, pilot canonical artifact’larından yalnız source-explicit, policy-covered, conflict-free/alias-dışı cohort seçer; karantina ve conflict kayıtlarını değiştirmez. Human-review ve release komutları, gerçek model verdict JSONL ve reviewer tarafından yazılmış karar JSONL'si gerektirir; bunlar olmadan Gold/publish fail-closed kalır.
 
 2026-08-13'te [NVIDIA When2Call](https://huggingface.co/datasets/nvidia/When2Call) revision `0582f7749df63a96fdc3070932e83e72396ace53` altındaki tüm erişilebilir veri split'leri salt-okunur pilotta işlendi. `train/sft` ve `train/pref` içindeki seçilmiş assistant hedefleri artık dahil edilir: açık `<TOOLCALL>` işaretleri, açık ek-bilgi istemleri ve açık tool-unavailable metinleri canonical'a alınır; belirsiz veya schema/argument açısından geçersiz kayıtlar karantinada kalır. 27.952 satırdan 27.393 canonical survivor üretildi; 559 gerekçeli karantina var. Dört split birlikte 2.917 exact duplicate group ve 136 human-review conflict adayı üretti. Bu modelsiz bir işlemdir; hiçbir gerçek kaynak satırı provider'a gönderilmedi, Gold/release veya insan kararı üretilmedi.
 
-Kullanıcının Hugging Face gated erişimiyle [Salesforce xLAM 60k](https://huggingface.co/datasets/Salesforce/xlam-function-calling-60k) train kaynağı revision `26d14ebfe18b1f7b524bd39b404b50af5dc97866` ile indirildi. 96.1 MB JSON dizi, tam dosya hash'i bağlı immutable JSONL'ye dönüştürüldü ve tamamı modelsiz pilotta işlendi: 60.000 source-valid satırdan 57.718 canonical kayıt, 2.282 gerekçeli karantina ve insan review bekleyen 6 hard-conflict adayı oluştu. Kaynak veya karantina kayıtları düzeltilmedi; gerçek kaynak içeriği provider'a gönderilmedi.
+Kullanıcının Hugging Face gated erişimiyle [Salesforce xLAM 60k](https://huggingface.co/datasets/Salesforce/xlam-function-calling-60k) train kaynağı revision `26d14ebfe18b1f7b524bd39b404b50af5dc97866` ile indirildi. 96.1 MB JSON dizi, tam dosya hash'i bağlı immutable JSONL'ye dönüştürüldü ve tamamı modelsiz pilotta işlendi: 60.000 source-valid satırdan 57.718 canonical kayıt, 2.282 gerekçeli karantina ve insan review bekleyen 6 hard-conflict adayı oluştu. Pilot kaynak veya karantina kayıtlarını değiştirmedi ve provider egress'i yapmadı; daha sonraki bounded automation koşusuna yalnız conflict-free canonical candidate leaf'leri explicit olarak girdi.
 
 Gözden geçirilmiş field policy, When2Call+xLAM toplam 85.111 canonical episode üzerinde ağsız doğrulandı: 849.064 çevrilebilir segment ve 0 çözülmemiş policy hatası. Tool/parameter açıklamaları çevrilebilir; tüm tanımsız argument path'leri `copy_exact` kalır ve modele gönderilmez. Bu kapsam, yalnız source-explicit ve conflict-free pre-review canary için küçük canlı testlere izin verir; S400, Gold ve release insan kabulundan önce kapalıdır.
 
@@ -134,6 +135,19 @@ uv run tcdata evaluation run <live-evaluation-input.jsonl> --output <disjoint-ev
 ```
 
 İki komut da otomatik Gold/release yapmaz ve ham içerik ya da anahtar tutmayan attempt manifestleri üretir.
+
+## Otomatik aday → HF review paketi
+
+`automation run`, insan incelemesini kayıt-bazlı erken kapı olmaktan çıkarıp yayın öncesindeki son kapıya taşır. Aynı route tekrar çalıştırılırsa immutable checkpoint kullanılır; response-contract/HTTP transient hatasında DeepSeek Flash’tan Pro’ya bir kez geçilir. Ağ teslimatı belirsizse veya iki judge uzlaşmazsa kayıt HF paketine alınmaz, ama batch devam eder.
+
+```powershell
+uv run tcdata automation run <canonical-1.jsonl> <canonical-2.jsonl> `
+  --conflict-audit <when2call-audit.json> --conflict-audit <xlam-audit.json> `
+  --output <disjoint-output> --config configs/provider-smoke.toml `
+  --episodes 1000 --max-segments 10000 --workers 4 --live
+```
+
+İsteğe bağlı `--source-row-cap` yalnız düşük maliyetli canary için her inputta deterministik pencere açar; 1.000’lik üretim için verilmez. Çıktıdaki `hf-review-package/<package-id>/data/train.jsonl` doğrudan HF JSON loader’a uygundur, ancak manifest `pending_human_approval` ve `publish_allowed=false` olarak kalır. Akışın ayrıntılı failover ve karar matrisi [08 — Otomatik review pipeline](docs/08-autonomous-review-pipeline.md) belgesindedir.
 
 ## Belgeler
 

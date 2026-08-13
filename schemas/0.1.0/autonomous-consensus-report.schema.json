@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Aggregate receipt for two-model quality consensus, never Gold acceptance.",
+  "properties": {
+    "accepted_units": {
+      "minimum": 0,
+      "title": "Accepted Units",
+      "type": "integer"
+    },
+    "consensus_manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Consensus Manifest Id",
+      "type": "string"
+    },
+    "gold_release_allowed": {
+      "const": false,
+      "default": false,
+      "title": "Gold Release Allowed",
+      "type": "boolean"
+    },
+    "mini_results_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Mini Results Sha256",
+      "type": "string"
+    },
+    "needs_review_units": {
+      "minimum": 0,
+      "title": "Needs Review Units",
+      "type": "integer"
+    },
+    "report_id": {
+      "pattern": "^autoconsreport_[0-9a-f]{64}$",
+      "title": "Report Id",
+      "type": "string"
+    },
+    "requested_units": {
+      "exclusiveMinimum": 0,
+      "title": "Requested Units",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "autonomous-consensus-report-0.1.0",
+      "default": "autonomous-consensus-report-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "strong_results_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Strong Results Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "report_id",
+    "mini_results_sha256",
+    "strong_results_sha256",
+    "requested_units",
+    "accepted_units",
+    "needs_review_units",
+    "consensus_manifest_id"
+  ],
+  "title": "AutomationConsensusReport",
+  "type": "object"
+}

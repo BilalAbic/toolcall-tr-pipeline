@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One deterministic, non-promoting source episode selected for automation.",
+  "properties": {
+    "dataset_namespace": {
+      "title": "Dataset Namespace",
+      "type": "string"
+    },
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "input_variant_id": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Input Variant Id",
+      "type": "string"
+    },
+    "rank": {
+      "exclusiveMinimum": 0,
+      "title": "Rank",
+      "type": "integer"
+    },
+    "rank_key": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Rank Key",
+      "type": "string"
+    },
+    "translatable_segments": {
+      "exclusiveMinimum": 0,
+      "title": "Translatable Segments",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "rank",
+    "episode_id",
+    "input_variant_id",
+    "dataset_namespace",
+    "rank_key",
+    "translatable_segments"
+  ],
+  "title": "AutomationCandidateMember",
+  "type": "object"
+}

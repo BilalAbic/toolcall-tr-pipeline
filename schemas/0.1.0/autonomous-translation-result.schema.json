@@ -1,0 +1,1011 @@
+{
+  "$defs": {
+    "Annotations": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "$ref": "#/$defs/Decision"
+        },
+        "execution_topology": {
+          "enum": [
+            "unknown",
+            "sequential",
+            "parallel"
+          ],
+          "title": "Execution Topology",
+          "type": "string"
+        },
+        "parent_episode_id": {
+          "anyOf": [
+            {
+              "pattern": "^ep_[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Parent Episode Id"
+        },
+        "source_conversation_id": {
+          "minLength": 1,
+          "title": "Source Conversation Id",
+          "type": "string"
+        },
+        "target_message_index": {
+          "minimum": 0,
+          "title": "Target Message Index",
+          "type": "integer"
+        },
+        "trajectory_state": {
+          "enum": [
+            "complete",
+            "awaiting_tool",
+            "truncated",
+            "failed"
+          ],
+          "title": "Trajectory State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_conversation_id",
+        "target_message_index",
+        "parent_episode_id",
+        "decision",
+        "trajectory_state",
+        "execution_topology"
+      ],
+      "title": "Annotations",
+      "type": "object"
+    },
+    "AutomationRoute": {
+      "additionalProperties": false,
+      "description": "One immutable model route for an episode.\n\nA route result embeds the regular operational translation result so its\nnormal source rehash and host-merge guarantees remain visible.  A failed\nroute carries only a stable failure code, not remote error text.",
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "failure_code": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProviderFailureCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "enum": [
+            "deepseek-v4-flash",
+            "deepseek-v4-pro"
+          ],
+          "title": "Model",
+          "type": "string"
+        },
+        "route": {
+          "enum": [
+            "primary",
+            "fallback"
+          ],
+          "title": "Route",
+          "type": "string"
+        },
+        "route_id": {
+          "pattern": "^autoroute_[0-9a-f]{64}$",
+          "title": "Route Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "autonomous-route-0.1.0",
+          "default": "autonomous-route-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "translated",
+            "research_needed",
+            "no_translatable_segments",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "translation_report_id": {
+          "anyOf": [
+            {
+              "pattern": "^trbatch_[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Translation Report Id"
+        },
+        "translation_result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OperationalTranslationResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "route_id",
+        "episode_id",
+        "route",
+        "model",
+        "status",
+        "translation_report_id",
+        "translation_result",
+        "failure_code"
+      ],
+      "title": "AutomationRoute",
+      "type": "object"
+    },
+    "CanonicalEpisode": {
+      "additionalProperties": false,
+      "properties": {
+        "annotations": {
+          "$ref": "#/$defs/Annotations"
+        },
+        "conversation": {
+          "items": {
+            "$ref": "#/$defs/Message"
+          },
+          "minItems": 1,
+          "title": "Conversation",
+          "type": "array"
+        },
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "parent_variant_id": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Parent Variant Id"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "quality": {
+          "$ref": "#/$defs/Quality"
+        },
+        "schema_version": {
+          "const": "0.1.0",
+          "default": "0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_episode_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Source Episode Fingerprint",
+          "type": "string"
+        },
+        "tools": {
+          "items": {
+            "$ref": "#/$defs/CanonicalTool"
+          },
+          "title": "Tools",
+          "type": "array"
+        },
+        "variant_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "episode_id",
+        "source_episode_fingerprint",
+        "variant_id",
+        "parent_variant_id",
+        "conversation",
+        "tools",
+        "provenance",
+        "annotations",
+        "quality"
+      ],
+      "title": "CanonicalEpisode",
+      "type": "object"
+    },
+    "CanonicalTool": {
+      "additionalProperties": false,
+      "properties": {
+        "documentation_hash": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Documentation Hash",
+          "type": "string"
+        },
+        "function": {
+          "$ref": "#/$defs/ToolFunction"
+        },
+        "normalizer_version": {
+          "const": "0.1.0",
+          "default": "0.1.0",
+          "title": "Normalizer Version",
+          "type": "string"
+        },
+        "raw_schema_hash": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Raw Schema Hash",
+          "type": "string"
+        },
+        "semantic_schema_hash": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Semantic Schema Hash",
+          "type": "string"
+        },
+        "tool_id": {
+          "pattern": "^tool_[0-9a-f]{64}$",
+          "title": "Tool Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "function",
+          "default": "function",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_id",
+        "raw_schema_hash",
+        "semantic_schema_hash",
+        "documentation_hash",
+        "function"
+      ],
+      "title": "CanonicalTool",
+      "type": "object"
+    },
+    "Decision": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/DecisionAction"
+        },
+        "call_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Call Ids",
+          "type": "array"
+        },
+        "call_shape": {
+          "anyOf": [
+            {
+              "enum": [
+                "single",
+                "multi_same_turn"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Call Shape"
+        },
+        "evidence_status": {
+          "enum": [
+            "source_explicit",
+            "source_derived",
+            "human_adjudicated",
+            "unknown"
+          ],
+          "title": "Evidence Status",
+          "type": "string"
+        },
+        "missing_required_parameters": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Required Parameters",
+          "type": "array"
+        },
+        "resolved_tool_ids": {
+          "items": {
+            "pattern": "^tool_[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Resolved Tool Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "action",
+        "call_shape",
+        "call_ids",
+        "resolved_tool_ids",
+        "missing_required_parameters",
+        "evidence_status"
+      ],
+      "title": "Decision",
+      "type": "object"
+    },
+    "DecisionAction": {
+      "enum": [
+        "tool_call",
+        "clarification",
+        "tool_unavailable",
+        "direct_answer",
+        "final_answer"
+      ],
+      "title": "DecisionAction",
+      "type": "string"
+    },
+    "FunctionCall": {
+      "additionalProperties": false,
+      "properties": {
+        "arguments": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Arguments",
+          "type": "object"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "arguments"
+      ],
+      "title": "FunctionCall",
+      "type": "object"
+    },
+    "ImageRef": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "minimum": 0,
+          "title": "Anchor",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "mime_type": {
+          "minLength": 1,
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "uri",
+        "mime_type",
+        "sha256",
+        "width",
+        "height",
+        "anchor"
+      ],
+      "title": "ImageRef",
+      "type": "object"
+    },
+    "JsonScalar": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonScalar"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "Message": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Content"
+        },
+        "images": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ImageRef"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Images"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name"
+        },
+        "reasoning_content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reasoning Content"
+        },
+        "role": {
+          "$ref": "#/$defs/Role"
+        },
+        "thinking": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Thinking"
+        },
+        "tool_call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tool Call Id"
+        },
+        "tool_calls": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ToolCall"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tool Calls"
+        }
+      },
+      "required": [
+        "role",
+        "content",
+        "reasoning_content",
+        "thinking",
+        "tool_calls",
+        "images",
+        "name",
+        "tool_call_id"
+      ],
+      "title": "Message",
+      "type": "object"
+    },
+    "OperationalTranslationResult": {
+      "additionalProperties": false,
+      "description": "One canonical input episode, never a Gold or release decision.",
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "field_policy_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Field Policy Sha256",
+          "type": "string"
+        },
+        "input_variant_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Input Variant Id",
+          "type": "string"
+        },
+        "leaf_result_ids": {
+          "items": {
+            "pattern": "^leaftr_[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Leaf Result Ids",
+          "type": "array"
+        },
+        "promotion": {
+          "const": "not_eligible",
+          "default": "not_eligible",
+          "title": "Promotion",
+          "type": "string"
+        },
+        "prompt_id": {
+          "pattern": "^prompt_[0-9a-f]{64}$",
+          "title": "Prompt Id",
+          "type": "string"
+        },
+        "result_id": {
+          "pattern": "^trresult_[0-9a-f]{64}$",
+          "title": "Result Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "operational-translation-result-0.1.0",
+          "default": "operational-translation-result-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "translated",
+            "research_needed",
+            "no_translatable_segments"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "translated_episode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CanonicalEpisode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "result_id",
+        "episode_id",
+        "input_variant_id",
+        "field_policy_sha256",
+        "prompt_id",
+        "status",
+        "leaf_result_ids",
+        "translated_episode"
+      ],
+      "title": "OperationalTranslationResult",
+      "type": "object"
+    },
+    "PipelineProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "run_event_id": {
+          "minLength": 1,
+          "title": "Run Event Id",
+          "type": "string"
+        },
+        "version": {
+          "const": "0.1.0",
+          "default": "0.1.0",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_event_id"
+      ],
+      "title": "PipelineProvenance",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "pipeline": {
+          "$ref": "#/$defs/PipelineProvenance"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceProvenance"
+          },
+          "minItems": 1,
+          "title": "Sources",
+          "type": "array"
+        },
+        "transformations": {
+          "items": {
+            "$ref": "#/$defs/Transformation"
+          },
+          "title": "Transformations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sources",
+        "pipeline",
+        "transformations"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "ProviderFailureCode": {
+      "description": "Stable, redaction-safe reason codes; remote error text is intentionally absent.",
+      "enum": [
+        "preflight_blocked",
+        "credential_unavailable",
+        "endpoint_rejected",
+        "transport_configuration",
+        "http_transient",
+        "http_permanent",
+        "network_delivery_unknown",
+        "response_too_large",
+        "malformed_response",
+        "provider_response_invalid",
+        "provider_configuration",
+        "provider_gate",
+        "unknown"
+      ],
+      "title": "ProviderFailureCode",
+      "type": "string"
+    },
+    "Quality": {
+      "additionalProperties": false,
+      "properties": {
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "unreviewed",
+            "deterministic_failed",
+            "model_review",
+            "human_accepted",
+            "human_rejected",
+            "quarantined"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state",
+        "flags"
+      ],
+      "title": "Quality",
+      "type": "object"
+    },
+    "Role": {
+      "enum": [
+        "system",
+        "developer",
+        "user",
+        "assistant",
+        "tool"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "SourceProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "dataset_namespace": {
+          "minLength": 1,
+          "title": "Dataset Namespace",
+          "type": "string"
+        },
+        "observed_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Observed Paths",
+          "type": "array"
+        },
+        "raw_record_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Raw Record Sha256",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "pattern": "^snap_[0-9a-f]{64}$",
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "source_native_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Native Id"
+        },
+        "source_occurrence_id": {
+          "pattern": "^occ_[0-9a-f]{64}$",
+          "title": "Source Occurrence Id",
+          "type": "string"
+        },
+        "source_sequence": {
+          "exclusiveMinimum": 0,
+          "title": "Source Sequence",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "dataset_namespace",
+        "snapshot_id",
+        "source_occurrence_id",
+        "source_sequence",
+        "source_native_id",
+        "raw_record_sha256",
+        "observed_paths"
+      ],
+      "title": "SourceProvenance",
+      "type": "object"
+    },
+    "ToolCall": {
+      "additionalProperties": false,
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/FunctionCall"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "function",
+          "default": "function",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "function"
+      ],
+      "title": "ToolCall",
+      "type": "object"
+    },
+    "ToolFunction": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Description"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Parameters",
+          "type": "object"
+        },
+        "strict": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Strict"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "parameters",
+        "strict"
+      ],
+      "title": "ToolFunction",
+      "type": "object"
+    },
+    "Transformation": {
+      "additionalProperties": false,
+      "properties": {
+        "input_pointers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Input Pointers",
+          "type": "array"
+        },
+        "output_pointer": {
+          "title": "Output Pointer",
+          "type": "string"
+        },
+        "transformation_id": {
+          "minLength": 1,
+          "title": "Transformation Id",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transformation_id",
+        "version",
+        "input_pointers",
+        "output_pointer"
+      ],
+      "title": "Transformation",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One terminal translation decision; failed records do not stop a batch.",
+  "properties": {
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "input_variant_id": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Input Variant Id",
+      "type": "string"
+    },
+    "promotion": {
+      "const": "not_eligible",
+      "default": "not_eligible",
+      "title": "Promotion",
+      "type": "string"
+    },
+    "result_id": {
+      "pattern": "^autotr_[0-9a-f]{64}$",
+      "title": "Result Id",
+      "type": "string"
+    },
+    "routes": {
+      "items": {
+        "$ref": "#/$defs/AutomationRoute"
+      },
+      "maxItems": 2,
+      "minItems": 1,
+      "title": "Routes",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "autonomous-translation-result-0.1.0",
+      "default": "autonomous-translation-result-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selected_route_id": {
+      "anyOf": [
+        {
+          "pattern": "^autoroute_[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Selected Route Id"
+    },
+    "status": {
+      "enum": [
+        "translated",
+        "needs_review"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "translation_result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OperationalTranslationResult"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "result_id",
+    "episode_id",
+    "input_variant_id",
+    "routes",
+    "selected_route_id",
+    "status",
+    "translation_result"
+  ],
+  "title": "AutomationEpisodeResult",
+  "type": "object"
+}

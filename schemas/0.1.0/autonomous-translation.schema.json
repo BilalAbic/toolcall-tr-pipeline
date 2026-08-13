@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Aggregate receipt for a batch that can continue after per-episode errors.",
+  "properties": {
+    "batch_id": {
+      "pattern": "^autobatch_[0-9a-f]{64}$",
+      "title": "Batch Id",
+      "type": "string"
+    },
+    "fallback_routes": {
+      "minimum": 0,
+      "title": "Fallback Routes",
+      "type": "integer"
+    },
+    "field_policy_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Field Policy Sha256",
+      "type": "string"
+    },
+    "input_file_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Input File Sha256",
+      "type": "string"
+    },
+    "needs_review_records": {
+      "minimum": 0,
+      "title": "Needs Review Records",
+      "type": "integer"
+    },
+    "primary_routes": {
+      "minimum": 0,
+      "title": "Primary Routes",
+      "type": "integer"
+    },
+    "promotion": {
+      "const": "not_eligible",
+      "default": "not_eligible",
+      "title": "Promotion",
+      "type": "string"
+    },
+    "prompt_id": {
+      "pattern": "^prompt_[0-9a-f]{64}$",
+      "title": "Prompt Id",
+      "type": "string"
+    },
+    "result_manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Result Manifest Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "autonomous-translation-0.1.0",
+      "default": "autonomous-translation-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_records": {
+      "exclusiveMinimum": 0,
+      "title": "Source Records",
+      "type": "integer"
+    },
+    "translated_records": {
+      "minimum": 0,
+      "title": "Translated Records",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "batch_id",
+    "input_file_sha256",
+    "field_policy_sha256",
+    "prompt_id",
+    "source_records",
+    "translated_records",
+    "needs_review_records",
+    "primary_routes",
+    "fallback_routes",
+    "result_manifest_id"
+  ],
+  "title": "AutomationTranslationReport",
+  "type": "object"
+}

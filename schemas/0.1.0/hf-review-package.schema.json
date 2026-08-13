@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Content-addressed upload directory, deliberately pending human approval.",
+  "properties": {
+    "automation_results_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Automation Results Sha256",
+      "type": "string"
+    },
+    "candidate_jsonl_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Candidate Jsonl Sha256",
+      "type": "string"
+    },
+    "consensus_jsonl_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Consensus Jsonl Sha256",
+      "type": "string"
+    },
+    "needs_review_records": {
+      "minimum": 0,
+      "title": "Needs Review Records",
+      "type": "integer"
+    },
+    "package_id": {
+      "pattern": "^hfpackage_[0-9a-f]{64}$",
+      "title": "Package Id",
+      "type": "string"
+    },
+    "publish_allowed": {
+      "const": false,
+      "default": false,
+      "title": "Publish Allowed",
+      "type": "boolean"
+    },
+    "review_ready_records": {
+      "minimum": 0,
+      "title": "Review Ready Records",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "hf-review-package-0.1.0",
+      "default": "hf-review-package-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_records": {
+      "exclusiveMinimum": 0,
+      "title": "Source Records",
+      "type": "integer"
+    },
+    "status": {
+      "const": "pending_human_approval",
+      "default": "pending_human_approval",
+      "title": "Status",
+      "type": "string"
+    },
+    "train_jsonl_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Train Jsonl Sha256",
+      "type": "string"
+    },
+    "upload_path": {
+      "const": "data/train.jsonl",
+      "default": "data/train.jsonl",
+      "title": "Upload Path",
+      "type": "string"
+    }
+  },
+  "required": [
+    "package_id",
+    "candidate_jsonl_sha256",
+    "automation_results_sha256",
+    "consensus_jsonl_sha256",
+    "train_jsonl_sha256",
+    "source_records",
+    "review_ready_records",
+    "needs_review_records"
+  ],
+  "title": "HuggingFaceReviewPackage",
+  "type": "object"
+}

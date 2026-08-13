@@ -287,7 +287,7 @@ Tek 1–10 puanı yoktur. Judge, enum hata kodu + kategori + şiddet + segment/s
 
 ## 12. Repair protokolü
 
-- Otomatik retry bütçesi `0`dır; parse/schema/transient provider hatası yalnız append-only kayıtta `manual-retry-candidate` olarak sınıflanır ve insan/operatör onayı olmadan tekrar gönderilmez.
+- Temel provider adapter route’unun otomatik retry bütçesi `0`dır; append-only attempt kaydı aynı model/isteği tekrar göndermez. `automation run` yalnız `provider_response_invalid`, `malformed_response`, `response_too_large` veya HTTP transient sınıfında etkilenen episode için bir kez farklı DeepSeek Pro route’u açabilir; ağ teslimatı belirsizse tekrar göndermez.
 - Semantic fail aynı promptla kör retry almaz.
 - Judge serbest talimat yerine enum hata kodu, segment ID ve span verir.
 - Repair modeline yalnız hatalı segment, kaynak segment, doğrulanmış evidence ve izinli hata kodu gönderilir.

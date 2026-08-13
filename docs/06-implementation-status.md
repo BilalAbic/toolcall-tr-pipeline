@@ -2,7 +2,7 @@
 
 Tarih: 2026-08-13
 
-Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi birbirinden ayırır. “Uygulandı” ifadesi kod ve test kanıtı bulunan davranışları belirtir. Canlı kanıt sabit sentetik smoke'lar, 3 episode'luk sentetik çeviri batch'i ve 1 girdilik sentetik judge batch'iyle sınırlıdır. NVIDIA When2Call'ın test ve train split'leri ile Salesforce xLAM 60k train kaynağında revision-pinned modelsiz pilotlar tamamlanmıştır; insan adjudication, gerçek kaynak model egress'i veya release anlamına gelmez.
+Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi birbirinden ayırır. “Uygulandı” ifadesi kod ve test kanıtı bulunan davranışları belirtir. Canlı kanıt; sabit sentetik smoke'ları, pre-review canary’yi ve 50 gerçek canonical adayla bounded automation koşusunu içerir. NVIDIA When2Call'ın test ve train split'leri ile Salesforce xLAM 60k train kaynağında revision-pinned modelsiz pilotlar tamamlanmıştır; otomasyon yalnız conflict-free candidate cohort’a explicit egress yapar, insan adjudication veya release anlamına gelmez.
 
 İki kaynağın tam revision/hash/pilot sayımları [07 — Gerçek kaynak pilot kayıtları](07-source-pilots.md) belgesindedir.
 
@@ -13,9 +13,9 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `secure_transport.py` yalnız public HTTPS, no-proxy/no-redirect, bounded response ve redacted hata yüzeyiyle çalışır. `credentials.py` yalnız allow-list'li provider anahtarını `.env` veya process environment'tan çözer; anahtar loglanmaz.
 - `deepseek_adapter.py` yalnız `https://api.deepseek.com/chat/completions` ve V4 modellerini; `openai_judge.py` yalnız `https://api.openai.com/v1/responses` ile belirtilen judge modellerini kabul eder.
 - `live_preflight.py` secret/PII/local-path/private endpoint bulgularını transport öncesi reddeder. Varsayılan pipeline config yine çevrimdışıdır.
-- Varsayılan configte provider/eval kapalıdır. `translate` ve `evaluation run` yalnız explicit `--live`, non-default config, disjoint output root ve preflight ile çalışır. `canary prepare` yalnız source-explicit, policy-covered, conflict-free/alias-dışı en çok 30 episode için pre-review test cohort'u üretir; review/release son kabulda yalnız haricî insan kararlarını doğrular.
+- Varsayılan configte provider/eval kapalıdır. `translate`, `evaluation run` ve `automation run` yalnız explicit `--live`, non-default config, disjoint output root ve preflight ile çalışır. `automation run` birincil Flash route’u, safe terminal failure’da tek Pro fallback’i ve iki bağımsız judge consensus’unu uygular; teslimatı belirsiz ağ hatasını tekrar göndermez. Review/release son kabulda yalnız haricî insan kararlarını doğrular.
 - Testler `tests/fixtures/` altındaki küçük sentetik JSONL dosyalarını ve pytest geçici dizinlerini kullanır.
-- Gerçek kaynak snapshot/pilot artifactı yalnız yerel ve ignore edilmiş artifact kökü altında üretildi; kaynak değiştirilmedi ve hiçbir gerçek kaynak satırı modele gönderilmedi. Gerçek insan kararı, S30/S400 seçimi veya release artifactı üretilmemiştir.
+- Gerçek kaynak snapshot/pilot artifactı yalnız yerel ve ignore edilmiş artifact kökü altında üretildi; kaynak değiştirilmedi. 2026-08-13 bounded automation koşusunda conflict-free 50 canonical adayın policy-izinli leaf'leri explicit provider egress’iyle işlendi; artefact yalnız `pending_human_approval` HF review paketi üretir. Gerçek insan kararı, S30/S400 seçimi, Gold veya publish artifactı üretilmemiştir.
 
 ## Teslim matrisi
 
@@ -23,7 +23,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 |---|---|---|---|
 | Proje iskeleti ve kilitli ortam | Uygulandı | `pyproject.toml`, `uv.lock`, `src/toolcall_tr/`, `tests/` | Python 3.12, `uv`, pytest/Hypothesis, Ruff ve Pyright yapılandırması |
 | Strict sözleşmeler | Uygulandı | `src/toolcall_tr/models.py`, `source.py`, `artifacts.py`, `events.py`, `diagnostics.py` | Pydantic strict/frozen, extra alan reddi, role/call/state doğrulaması |
-| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Seksen beş immutable versioned artifact; dialect ve meta-schema kontrolü |
+| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Doksan dört immutable versioned artifact; dialect ve meta-schema kontrolü |
 | Diagnostic catalog | Uygulandı | `src/toolcall_tr/data/diagnostic_catalog.json` | Bilinen kodların anlamı catalogdan gelir; bilinmeyen kod fail-closed |
 | Canonical JSON/hash/ID | Uygulandı | `src/toolcall_tr/hashing.py`, `ids.py` | RFC 8785/JCS, SHA-256, key-order invariance, non-finite sayı reddi |
 | Artifact manifesti | Uygulandı | `src/toolcall_tr/artifacts.py`, `shards.py` | Content-addressed isim, dengeli row accounting, validate-before-publish, overwrite yasağı, idempotent resume |
@@ -50,16 +50,18 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 | Canlı provider smoke | Uygulandı, sentetik sınırda | `secure_transport.py`, `credentials.py`, `deepseek_adapter.py`, `openai_judge.py`, `live_preflight.py`, `provider smoke` CLI | DeepSeek V4 çeviri ve OpenAI GPT-5.4-mini judge için gerçek endpoint smoke'u geçti; sabit sentetik içerik, explicit live config, endpoint allow-list, preflight ve local strict validation. Gerçek kaynak satırı bu endpointlere gönderilmedi. |
 | Operasyonel kaynak pilotu | Uygulandı, gerçek kaynak kanıtıyla | `src/toolcall_tr/pilot.py`, `pilot run` CLI | When2Call revision `0582f…ace53`, tüm splitler: 27.952 satır / 27.393 canonical / 559 karantina / 136 cross-split conflict. Training için source-explicit `<TOOLCALL>`, açık clarification ve açık tool-unavailable hedefleri alınır. xLAM 60k revision `26d14e…7866`: 57.718 canonical / 2.282 karantina / 6 hard-conflict. Kaynak yeniden hash'lendi; model/provider çağrısı yok. |
 | Pre-review canary | Uygulandı, sınırlı gerçek kaynak canlı kanıtıyla | `pre_review_canary.py`, `canary prepare`, `canary evaluation-inputs` | En çok 30 episode; yalnız source-explicit, policy-covered, conflict-free ve exact-alias dışı kayıtlar. When2Call'da 3 episode / 20 leaf `translation-prompt-0.2.0` ile DeepSeek V4 Flash'ta çevrildi; GPT-5.4-mini 20/20 `pass`, 0 finding. Her çıktı `promotion=not_eligible`, `gold_release_allowed=false`; insan kabulunu ikame etmez. |
+| Bounded otomasyon ve HF review paketi | Uygulandı, 50 gerçek canonical adayda canlı kanıtla | `autonomous_pipeline.py`, `automation run` CLI | Deterministik source-explicit, conflict-free/alias-dışı cohort; DeepSeek Flash → safe failure’da tek Pro fallback; unknown delivery yeniden gönderilmez; 4 eşzamanlı worker, host merge, mini+strong judge consensus ve strict `data/train.jsonl` paketi. 50 adaydan 46 çevrildi, 456 leaf iki-judge pass, 12 `silver_candidate` episode `pending_human_approval` HF paketine girdi; Gold/publish kapalı. |
 | İnsan review kuyruğu | Uygulandı, gerçek karar bekliyor | `review_queue.py`, `review prepare` CLI | Immutable karantina/audit kanıtları sıralı human-only görevlere dönüşür; 2026-08-13 yerel kuyruğu 2.841 karantina + 142 conflict görevi taşır (`manifest_a523…c8d`). Karar, drop veya kaynak değişikliği üretmez. |
 | İnsan review ve Gold release | Uygulandı, gerçek karar bekliyor | `human_review_log.py`, `review submit-*`, `release build/validate` | Haricî tek-kayıt reviewer JSONL strict doğrulanır ve hash zincirine append edilir. Release her satır için local verdict, açık human acceptance ve linked review ID olmadan oluşmaz. |
-| Provider attempt provenance | Uygulandı | `provider_provenance.py`, canlı adapterlar | Ham içerik veya credential saklamayan hash-only attempt kaydı; preflight/success/failure ve status sınıfları, otomatik retry bütçesi 0. |
-| Operasyonel canlı çeviri | Uygulandı, pre-review canary ile sınırlı | `src/toolcall_tr/operational_translation.py`, `translate` CLI | Yalnız field-policy tarafından izinli leaf'ler DeepSeek'e gider; source rehash ve host merge zorunlu. 3 sentetik no-tool episode'u ve 3 conflict-free When2Call episode'unun 20 leaf'i gerçek endpointte geçti. Otomatik retry, S400/Gold/release yok; insan kabulunu ikame etmez. |
-| Operasyonel canlı judge | Uygulandı, pre-review canary ile sınırlı | `src/toolcall_tr/live_evaluation.py`, `evaluation run` CLI | Tam-leaf hash'li source/target input, role-specific OpenAI judge, immutable attempt/result/report artifactları. 1 sentetik ve 20 pre-review When2Call leaf'i GPT-5.4-mini ile geçti; model çıktısı `gold_release_allowed=false` kalır. |
+| Provider attempt provenance | Uygulandı | `provider_provenance.py`, canlı adapterlar | Ham içerik veya credential saklamayan hash-only attempt kaydı; temel adapter route’u otomatik retry bütçesi 0. Automation orchestrator bu immutable receiptleri kullanarak yalnız safe sınıflarda tek farklı-model fallback yapar. |
+| Operasyonel canlı çeviri | Uygulandı, bounded automation ile | `src/toolcall_tr/operational_translation.py`, `translate` CLI | Yalnız field-policy tarafından izinli leaf'ler DeepSeek'e gider; source rehash ve host merge zorunlu. `automation run`, episode hata izolasyonu, checkpoint/resume, safe Flash → Pro fallback ve 1–16 worker ile bunu cohort seviyesine taşır. Gold/release yok. |
+| Operasyonel canlı judge | Uygulandı, bounded automation ile | `src/toolcall_tr/live_evaluation.py`, `evaluation run` CLI | Tam-leaf hash'li source/target input, role-specific OpenAI judge, immutable attempt/result/report artifactları. `automation run` mini ve strong judge’ı aynı leaf membershipinde çalıştırır; yalnız iki `pass` review package’a girer, `gold_release_allowed=false` kalır. |
 | Faz 6–7 render/loss-mask | Sözleşme kodu mevcut | `src/toolcall_tr/render_contract.py` | Enjekte edilmiş renderer/tokenizer, pinli config, teknik yapı ve final assistant payload eşleşmesi, tek target span ve truncation/offset uyuşmazlığında ret; model hub, chat-template/tokenizer indirme veya render CLI yok |
-| Release manifest (Gold JSONL) | Fixture düzeyinde uygulandı | `release_contract.py`, `test_release_contract.py` | Sıralı yerel JSONL dosyalarının byte hash/row count doğrulaması, episode sırası ve açık human-review ID ile Gold üyeliği; gerçek release, Parquet, Dataset Card veya Hugging Face yok |
-| Research/memory/repair ve gerçek dataset provider koşusu | Kısmen uygulandı | Faz 5+ | Prompt, provider adapter, live translation/judge batch sözleşmeleri vardır. Research fetch, automated repair, gerçek kaynak üzerinde çalıştırma ve batch auto-retry yok. |
+| HF review package | Uygulandı, publish kapalı | `autonomous_pipeline.py`, `automation run` CLI | `messages` + `tools` içeren strict `data/train.jsonl`, `dataset_info.json`, Dataset Card ve hashli manifest üretir. Paket `silver_candidate`, `pending_human_approval`, `publish_allowed=false` olur; upload/publish komutu yoktur. |
+| Release manifest (Gold JSONL) | Fixture düzeyinde uygulandı | `release_contract.py`, `test_release_contract.py` | Sıralı yerel JSONL dosyalarının byte hash/row count doğrulaması, episode sırası ve açık human-review ID ile Gold üyeliği; gerçek Gold release veya Hugging Face publish yok |
+| Research/memory/repair | Kısmen uygulandı | Faz 5+ | Prompt, provider adapter, live translation/judge batch ve bounded fallback sözleşmeleri vardır. Research fetch ve automated repair yok. |
 | Pilot ve insan review çalıştırması | Kısmen uygulandı | Faz 6–8 | When2Call'ın tüm erişilebilir splitleri ve xLAM 60k üzerinde fail-closed modelsiz pilot tamamlandı. S30/S100/S250/S400 için yeterli ve yetkili insan review/adjudication yapılmadı; Gold kapalıdır. |
-| Yayınlama/HF/Parquet | Uygulanmadı | Faz 9 | Release-manifest sözleşmesi vardır; Gold/silver artifact, Dataset Card, Parquet round-trip veya Hugging Face yayını yok |
+| Yayınlama/HF/Parquet | Kısmen uygulandı | Faz 9 | Upload-ready JSONL review package ve Dataset Card vardır; explicit insan onayı, Gold membership, Parquet round-trip ve Hugging Face publish komutu yok |
 
 ## Schema artifactları
 
@@ -68,6 +70,13 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `bronze-record.schema.json`
 - `canonical-episode.schema.json`
 - `canonical-quarantine.schema.json`
+- `autonomous-candidate.schema.json`
+- `autonomous-candidate-member.schema.json`
+- `autonomous-route.schema.json`
+- `autonomous-translation-result.schema.json`
+- `autonomous-translation.schema.json`
+- `autonomous-consensus.schema.json`
+- `autonomous-consensus-report.schema.json`
 - `argument-path-policy.schema.json`
 - `conflict-adjudication.schema.json`
 - `conflict-candidate.schema.json`
@@ -86,6 +95,8 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `gold-acceptance.schema.json`
 - `human-evaluation-review.schema.json`
 - `human-evaluation-review-entry.schema.json`
+- `hf-dataset-row.schema.json`
+- `hf-review-package.schema.json`
 - `leaf-translation-record.schema.json`
 - `live-evaluation-input.schema.json`
 - `live-evaluation-result.schema.json`
