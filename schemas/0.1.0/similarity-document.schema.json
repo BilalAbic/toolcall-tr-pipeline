@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "similarity-document-0.1.0",
+      "default": "similarity-document-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "text": {
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "episode_id",
+    "text"
+  ],
+  "title": "SimilarityDocument",
+  "type": "object"
+}

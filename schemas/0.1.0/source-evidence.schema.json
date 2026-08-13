@@ -1,0 +1,404 @@
+{
+  "$defs": {
+    "AcceptableBehavior": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/DecisionAction"
+        },
+        "authority": {
+          "enum": [
+            "source_explicit",
+            "human_adjudicated"
+          ],
+          "title": "Authority",
+          "type": "string"
+        },
+        "tool_ids": {
+          "items": {
+            "pattern": "^tool_[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Tool Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "action",
+        "tool_ids",
+        "authority"
+      ],
+      "title": "AcceptableBehavior",
+      "type": "object"
+    },
+    "ArgumentOrigin": {
+      "enum": [
+        "explicit_user",
+        "prior_turn",
+        "tool_result",
+        "system_context",
+        "deterministic_default",
+        "derived",
+        "must_not_infer",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ArgumentProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "argument_pointer": {
+          "minLength": 1,
+          "title": "Argument Pointer",
+          "type": "string"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "evidence_pointers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Pointers",
+          "type": "array"
+        },
+        "input_pointers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Input Pointers",
+          "type": "array"
+        },
+        "origin": {
+          "$ref": "#/$defs/ArgumentOrigin"
+        },
+        "transformation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Transformation Id"
+        }
+      },
+      "required": [
+        "call_id",
+        "argument_pointer",
+        "origin",
+        "evidence_pointers",
+        "transformation_id",
+        "input_pointers"
+      ],
+      "title": "ArgumentProvenance",
+      "type": "object"
+    },
+    "DecisionAction": {
+      "enum": [
+        "tool_call",
+        "clarification",
+        "tool_unavailable",
+        "direct_answer",
+        "final_answer"
+      ],
+      "title": "DecisionAction",
+      "type": "string"
+    },
+    "DeterministicCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "minLength": 1,
+          "title": "Check Id",
+          "type": "string"
+        },
+        "json_pointer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Json Pointer"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "review"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "check_id",
+        "status",
+        "json_pointer",
+        "message"
+      ],
+      "title": "DeterministicCheck",
+      "type": "object"
+    },
+    "Diagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "diagnostic_catalog_version": {
+          "const": "0.1.0",
+          "default": "0.1.0",
+          "title": "Diagnostic Catalog Version",
+          "type": "string"
+        },
+        "episode_id": {
+          "anyOf": [
+            {
+              "pattern": "^ep_[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Episode Id"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "json_pointer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Json Pointer"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "diagnostic-0.1.0",
+          "default": "diagnostic-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "source_line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Line"
+        },
+        "source_occurrence_id": {
+          "anyOf": [
+            {
+              "pattern": "^occ_[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Occurrence Id"
+        },
+        "stage": {
+          "minLength": 1,
+          "title": "Stage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "stage",
+        "severity",
+        "source_occurrence_id",
+        "episode_id",
+        "json_pointer",
+        "source_line",
+        "message",
+        "retryable",
+        "evidence_refs"
+      ],
+      "title": "Diagnostic",
+      "type": "object"
+    },
+    "EvidenceClaim": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "argument_grounding",
+          "title": "Kind",
+          "type": "string"
+        },
+        "source_pointers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Pointers",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "supported",
+            "unsupported",
+            "unresolved"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "target_pointer": {
+          "minLength": 1,
+          "title": "Target Pointer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "status",
+        "source_pointers",
+        "target_pointer"
+      ],
+      "title": "EvidenceClaim",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acceptable_behaviors": {
+      "items": {
+        "$ref": "#/$defs/AcceptableBehavior"
+      },
+      "minItems": 1,
+      "title": "Acceptable Behaviors",
+      "type": "array"
+    },
+    "argument_provenance": {
+      "items": {
+        "$ref": "#/$defs/ArgumentProvenance"
+      },
+      "title": "Argument Provenance",
+      "type": "array"
+    },
+    "claims": {
+      "items": {
+        "$ref": "#/$defs/EvidenceClaim"
+      },
+      "title": "Claims",
+      "type": "array"
+    },
+    "deterministic_checks": {
+      "items": {
+        "$ref": "#/$defs/DeterministicCheck"
+      },
+      "minItems": 1,
+      "title": "Deterministic Checks",
+      "type": "array"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/Diagnostic"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "forbidden_behaviors": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Forbidden Behaviors",
+      "type": "array"
+    },
+    "human_verdict": {
+      "const": "source_review",
+      "default": "source_review",
+      "title": "Human Verdict",
+      "type": "string"
+    },
+    "judge_verdict": {
+      "const": "not_run",
+      "default": "not_run",
+      "title": "Judge Verdict",
+      "type": "string"
+    },
+    "pass1_result": {
+      "enum": [
+        "deterministic_pass",
+        "deterministic_fail",
+        "needs_semantic_review"
+      ],
+      "title": "Pass1 Result",
+      "type": "string"
+    },
+    "review_event_id": {
+      "default": null,
+      "title": "Review Event Id",
+      "type": "null"
+    },
+    "schema_version": {
+      "const": "source-evidence-0.1.0",
+      "default": "source-evidence-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "episode_id",
+    "deterministic_checks",
+    "argument_provenance",
+    "acceptable_behaviors",
+    "forbidden_behaviors",
+    "claims",
+    "diagnostics",
+    "pass1_result"
+  ],
+  "title": "SourceEvidence",
+  "type": "object"
+}

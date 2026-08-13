@@ -1,0 +1,98 @@
+{
+  "$defs": {
+    "EgressViolation": {
+      "additionalProperties": false,
+      "description": "A finding without the matched sensitive value.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/EgressViolationCategory"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "redactable": {
+          "title": "Redactable",
+          "type": "boolean"
+        },
+        "rule_id": {
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rule_id",
+        "category",
+        "start",
+        "end",
+        "redactable"
+      ],
+      "title": "EgressViolation",
+      "type": "object"
+    },
+    "EgressViolationCategory": {
+      "description": "Classes of content that must not leave the local pipeline.",
+      "enum": [
+        "configuration",
+        "secret",
+        "pii",
+        "local_path",
+        "private_endpoint",
+        "endpoint"
+      ],
+      "title": "EgressViolationCategory",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A safe-to-log decision; it never contains the original sensitive payload.",
+  "properties": {
+    "allowed": {
+      "const": false,
+      "default": false,
+      "title": "Allowed",
+      "type": "boolean"
+    },
+    "network_egress_enabled": {
+      "title": "Network Egress Enabled",
+      "type": "boolean"
+    },
+    "providers_enabled": {
+      "title": "Providers Enabled",
+      "type": "boolean"
+    },
+    "sanitized_payload": {
+      "title": "Sanitized Payload",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "pre-egress-decision-0.1.0",
+      "default": "pre-egress-decision-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "violations": {
+      "items": {
+        "$ref": "#/$defs/EgressViolation"
+      },
+      "title": "Violations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "sanitized_payload",
+    "violations",
+    "providers_enabled",
+    "network_egress_enabled"
+  ],
+  "title": "PreEgressDecision",
+  "type": "object"
+}

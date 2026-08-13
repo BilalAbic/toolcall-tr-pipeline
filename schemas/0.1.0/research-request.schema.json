@@ -1,0 +1,158 @@
+{
+  "$defs": {
+    "ResearchBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_elapsed_seconds_per_episode": {
+          "const": 60,
+          "default": 60,
+          "title": "Max Elapsed Seconds Per Episode",
+          "type": "integer"
+        },
+        "max_queries_per_episode": {
+          "const": 3,
+          "default": 3,
+          "title": "Max Queries Per Episode",
+          "type": "integer"
+        },
+        "max_sources_per_episode": {
+          "const": 5,
+          "default": 5,
+          "title": "Max Sources Per Episode",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "research-budget-0.1.0",
+          "default": "research-budget-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "ResearchBudget",
+      "type": "object"
+    },
+    "TerminologyRisk": {
+      "additionalProperties": false,
+      "properties": {
+        "disposition": {
+          "const": "needs_research",
+          "default": "needs_research",
+          "title": "Disposition",
+          "type": "string"
+        },
+        "path": {
+          "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+          "title": "Path",
+          "type": "string"
+        },
+        "risk_id": {
+          "pattern": "^risk_[0-9a-f]{64}$",
+          "title": "Risk Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "terminology-risk-0.1.0",
+          "default": "terminology-risk-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "segment_id": {
+          "pattern": "^seg_[0-9a-f]{64}$",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "term": {
+          "minLength": 1,
+          "title": "Term",
+          "type": "string"
+        },
+        "trigger": {
+          "enum": [
+            "uppercase_abbreviation",
+            "field_policy_unresolved"
+          ],
+          "title": "Trigger",
+          "type": "string"
+        }
+      },
+      "required": [
+        "risk_id",
+        "segment_id",
+        "path",
+        "term",
+        "trigger"
+      ],
+      "title": "TerminologyRisk",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A not-sent request. Another phase must perform any retrieval explicitly.",
+  "properties": {
+    "budget": {
+      "$ref": "#/$defs/ResearchBudget"
+    },
+    "elapsed_seconds_for_episode": {
+      "minimum": 0,
+      "title": "Elapsed Seconds For Episode",
+      "type": "integer"
+    },
+    "endpoint": {
+      "minLength": 1,
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "query_count_for_episode": {
+      "minimum": 1,
+      "title": "Query Count For Episode",
+      "type": "integer"
+    },
+    "request_id": {
+      "pattern": "^research_[0-9a-f]{64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "risk": {
+      "$ref": "#/$defs/TerminologyRisk"
+    },
+    "schema_version": {
+      "const": "research-request-0.1.0",
+      "default": "research-request-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_count_for_episode": {
+      "minimum": 1,
+      "title": "Source Count For Episode",
+      "type": "integer"
+    },
+    "source_type": {
+      "enum": [
+        "vendor_docs",
+        "standards_body",
+        "official_institution"
+      ],
+      "title": "Source Type",
+      "type": "string"
+    },
+    "status": {
+      "const": "not_sent",
+      "default": "not_sent",
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "request_id",
+    "risk",
+    "endpoint",
+    "source_type",
+    "query_count_for_episode",
+    "source_count_for_episode",
+    "elapsed_seconds_for_episode",
+    "budget"
+  ],
+  "title": "ResearchRequest",
+  "type": "object"
+}

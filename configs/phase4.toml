@@ -1,0 +1,8 @@
+schema_version = "phase4-config-0.1.0"
+ngram_size = 3
+near_duplicate_candidate_threshold = 0.82
+automatic_similarity_drop = false
+required_source_valid_membership = 400
+selection_tiers = [30, 100, 250, 400]
+semantic_judge_enabled = false
+human_adjudication_required = true

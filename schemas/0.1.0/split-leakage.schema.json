@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "component_episode_ids": {
+      "items": {
+        "pattern": "^ep_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "title": "Component Episode Ids",
+      "type": "array"
+    },
+    "observed_splits": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Observed Splits",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "split-leakage-0.1.0",
+      "default": "split-leakage-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "component_episode_ids",
+    "observed_splits"
+  ],
+  "title": "SplitLeakage",
+  "type": "object"
+}

@@ -1,0 +1,33 @@
+# Explicitly opt-in configuration for one synthetic, low-cost provider smoke.
+# It never processes a source dataset. Invoke only with:
+# tcdata provider smoke --live --config configs/provider-smoke.toml --send
+schema_version = "pipeline-config-0.1.0"
+canonical_schema_version = "0.1.0"
+diagnostic_catalog_version = "0.1.0"
+normalizer_version = "0.1.0"
+max_record_bytes = 8388608
+jsonl_shard_rows = 10000
+
+[providers]
+enabled = true
+network_egress_enabled = true
+
+[providers.translator]
+provider = "deepseek"
+endpoint = "https://api.deepseek.com/chat/completions"
+model = "deepseek-v4-flash"
+api_key_env = "DEEPSEEK_API_KEY"
+temperature = 0.0
+thinking = false
+
+[providers.strong_judge]
+provider = "openai"
+endpoint = "https://api.openai.com/v1/responses"
+model = "gpt-5.4"
+api_key_env = "OPENAI_API_KEY"
+
+[providers.mini_verifier]
+provider = "openai"
+endpoint = "https://api.openai.com/v1/responses"
+model = "gpt-5.4-mini"
+api_key_env = "OPENAI_API_KEY"

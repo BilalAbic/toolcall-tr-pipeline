@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "content": {
+      "minLength": 1,
+      "title": "Content",
+      "type": "string"
+    },
+    "content_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Content Sha256",
+      "type": "string"
+    },
+    "name": {
+      "enum": [
+        "core_contract",
+        "field_policy",
+        "fidelity_contract",
+        "protected_span_contract",
+        "terminology_protocol",
+        "output_contract",
+        "contrastive_examples"
+      ],
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "minLength": 1,
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "content",
+    "content_sha256"
+  ],
+  "title": "PromptLayer",
+  "type": "object"
+}

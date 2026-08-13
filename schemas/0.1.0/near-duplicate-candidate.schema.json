@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A review edge; similarity alone is never an authorization to drop data.",
+  "properties": {
+    "automatic_drop": {
+      "const": false,
+      "default": false,
+      "title": "Automatic Drop",
+      "type": "boolean"
+    },
+    "disposition": {
+      "const": "human_review",
+      "default": "human_review",
+      "title": "Disposition",
+      "type": "string"
+    },
+    "left_episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Left Episode Id",
+      "type": "string"
+    },
+    "ngram_size": {
+      "exclusiveMinimum": 0,
+      "title": "Ngram Size",
+      "type": "integer"
+    },
+    "right_episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Right Episode Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "near-duplicate-candidate-0.1.0",
+      "default": "near-duplicate-candidate-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "score": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Score",
+      "type": "number"
+    }
+  },
+  "required": [
+    "left_episode_id",
+    "right_episode_id",
+    "score",
+    "ngram_size"
+  ],
+  "title": "NearDuplicateCandidate",
+  "type": "object"
+}

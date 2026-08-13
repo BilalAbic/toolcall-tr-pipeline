@@ -1,0 +1,3 @@
+{"id":"no-tool-001","query":"Book me a flight.","response":"Which destination and date should I use?","action":"clarification","tools":[]}
+{"id":"no-tool-002","query":"Delete my bank account.","response":"No available tool can perform that action.","action":"tool_unavailable","tools":[]}
+{"id":"no-tool-003","query":"Say hello.","response":"Hello!","action":"direct_answer","tools":[]}

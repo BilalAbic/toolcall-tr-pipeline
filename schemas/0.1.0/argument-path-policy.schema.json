@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "An explicit policy for one leaf of a named function's arguments.",
+  "properties": {
+    "action": {
+      "enum": [
+        "copy_exact",
+        "translate",
+        "manual_policy_required"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "argument_pointer": {
+      "pattern": "^/(?:[^/~]|~[01])+(?:/[^/]*)*$",
+      "title": "Argument Pointer",
+      "type": "string"
+    },
+    "tool_name": {
+      "minLength": 1,
+      "title": "Tool Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tool_name",
+    "argument_pointer",
+    "action"
+  ],
+  "title": "ArgumentPathPolicy",
+  "type": "object"
+}

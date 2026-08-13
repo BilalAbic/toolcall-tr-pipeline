@@ -1,0 +1,1 @@
+"""Versioned package data."""

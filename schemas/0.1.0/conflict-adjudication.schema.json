@@ -1,0 +1,89 @@
+{
+  "$defs": {
+    "AdjudicationDecision": {
+      "enum": [
+        "keep_left",
+        "keep_right",
+        "keep_both_context_insufficient",
+        "source_error",
+        "policy_variant",
+        "defer"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Human-authored decision payload stored inside a generic chained run event.",
+  "properties": {
+    "conflict_id": {
+      "pattern": "^conf_[0-9a-f]{64}$",
+      "title": "Conflict Id",
+      "type": "string"
+    },
+    "decision": {
+      "$ref": "#/$defs/AdjudicationDecision"
+    },
+    "left_episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Left Episode Id",
+      "type": "string"
+    },
+    "rationale": {
+      "minLength": 1,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "reviewer_authority": {
+      "const": "human",
+      "title": "Reviewer Authority",
+      "type": "string"
+    },
+    "reviewer_id": {
+      "minLength": 1,
+      "title": "Reviewer Id",
+      "type": "string"
+    },
+    "right_episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Right Episode Id",
+      "type": "string"
+    },
+    "rubric_version": {
+      "minLength": 1,
+      "title": "Rubric Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "conflict-adjudication-0.1.0",
+      "default": "conflict-adjudication-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "supersedes_event_id": {
+      "anyOf": [
+        {
+          "pattern": "^evt_[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Supersedes Event Id"
+    }
+  },
+  "required": [
+    "conflict_id",
+    "left_episode_id",
+    "right_episode_id",
+    "decision",
+    "reviewer_id",
+    "reviewer_authority",
+    "rubric_version",
+    "rationale",
+    "supersedes_event_id"
+  ],
+  "title": "ConflictAdjudication",
+  "type": "object"
+}

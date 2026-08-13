@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "disposition": {
+      "const": "needs_research",
+      "default": "needs_research",
+      "title": "Disposition",
+      "type": "string"
+    },
+    "path": {
+      "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+      "title": "Path",
+      "type": "string"
+    },
+    "risk_id": {
+      "pattern": "^risk_[0-9a-f]{64}$",
+      "title": "Risk Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "terminology-risk-0.1.0",
+      "default": "terminology-risk-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "segment_id": {
+      "pattern": "^seg_[0-9a-f]{64}$",
+      "title": "Segment Id",
+      "type": "string"
+    },
+    "term": {
+      "minLength": 1,
+      "title": "Term",
+      "type": "string"
+    },
+    "trigger": {
+      "enum": [
+        "uppercase_abbreviation",
+        "field_policy_unresolved"
+      ],
+      "title": "Trigger",
+      "type": "string"
+    }
+  },
+  "required": [
+    "risk_id",
+    "segment_id",
+    "path",
+    "term",
+    "trigger"
+  ],
+  "title": "TerminologyRisk",
+  "type": "object"
+}

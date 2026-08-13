@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One exact context/behavior group with a deterministic reporting owner.",
+  "properties": {
+    "alias_episode_ids": {
+      "items": {
+        "pattern": "^ep_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Alias Episode Ids",
+      "type": "array"
+    },
+    "automatic_drop": {
+      "const": false,
+      "default": false,
+      "title": "Automatic Drop",
+      "type": "boolean"
+    },
+    "member_episode_ids": {
+      "items": {
+        "pattern": "^ep_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "minItems": 2,
+      "title": "Member Episode Ids",
+      "type": "array"
+    },
+    "ordered_behavior_fingerprint": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Ordered Behavior Fingerprint",
+      "type": "string"
+    },
+    "owner_episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Owner Episode Id",
+      "type": "string"
+    },
+    "presented_context_fingerprint": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Presented Context Fingerprint",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "exact-duplicate-0.1.0",
+      "default": "exact-duplicate-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "presented_context_fingerprint",
+    "ordered_behavior_fingerprint",
+    "owner_episode_id",
+    "alias_episode_ids",
+    "member_episode_ids"
+  ],
+  "title": "ExactDuplicateGroup",
+  "type": "object"
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "automatic_similarity_drop": {
+      "title": "Automatic Similarity Drop",
+      "type": "boolean"
+    },
+    "human_adjudication_required": {
+      "title": "Human Adjudication Required",
+      "type": "boolean"
+    },
+    "near_duplicate_candidate_threshold": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Near Duplicate Candidate Threshold",
+      "type": "number"
+    },
+    "ngram_size": {
+      "maximum": 8,
+      "minimum": 1,
+      "title": "Ngram Size",
+      "type": "integer"
+    },
+    "required_source_valid_membership": {
+      "minimum": 400,
+      "title": "Required Source Valid Membership",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "phase4-config-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selection_tiers": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Selection Tiers",
+      "type": "array"
+    },
+    "semantic_judge_enabled": {
+      "title": "Semantic Judge Enabled",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "ngram_size",
+    "near_duplicate_candidate_threshold",
+    "automatic_similarity_drop",
+    "required_source_valid_membership",
+    "selection_tiers",
+    "semantic_judge_enabled",
+    "human_adjudication_required"
+  ],
+  "title": "Phase4Config",
+  "type": "object"
+}

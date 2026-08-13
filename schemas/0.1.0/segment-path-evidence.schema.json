@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Localized, bidirectional evidence for exactly one evaluation leaf.",
+  "properties": {
+    "path": {
+      "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+      "title": "Path",
+      "type": "string"
+    },
+    "segment_id": {
+      "pattern": "^seg_[0-9a-f]{64}$",
+      "title": "Segment Id",
+      "type": "string"
+    },
+    "source_excerpt": {
+      "minLength": 1,
+      "title": "Source Excerpt",
+      "type": "string"
+    },
+    "target_excerpt": {
+      "minLength": 1,
+      "title": "Target Excerpt",
+      "type": "string"
+    }
+  },
+  "required": [
+    "segment_id",
+    "path",
+    "source_excerpt",
+    "target_excerpt"
+  ],
+  "title": "SegmentPathEvidence",
+  "type": "object"
+}

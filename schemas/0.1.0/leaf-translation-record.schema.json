@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Validated, host-owned outcome of exactly one leaf request.",
+  "properties": {
+    "leaf_result_id": {
+      "pattern": "^leaftr_[0-9a-f]{64}$",
+      "title": "Leaf Result Id",
+      "type": "string"
+    },
+    "provider_attempt_id": {
+      "pattern": "^pvattempt_[0-9a-f]{64}$",
+      "title": "Provider Attempt Id",
+      "type": "string"
+    },
+    "request_id": {
+      "pattern": "^trq_[0-9a-f]{64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "leaf-translation-record-0.1.0",
+      "default": "leaf-translation-record-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "segment_id": {
+      "pattern": "^seg_[0-9a-f]{64}$",
+      "title": "Segment Id",
+      "type": "string"
+    },
+    "source_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Source Sha256",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "translated",
+        "research_needed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "target_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Target Text"
+    }
+  },
+  "required": [
+    "leaf_result_id",
+    "request_id",
+    "segment_id",
+    "source_sha256",
+    "provider_attempt_id",
+    "status",
+    "target_text"
+  ],
+  "title": "LeafTranslationRecord",
+  "type": "object"
+}

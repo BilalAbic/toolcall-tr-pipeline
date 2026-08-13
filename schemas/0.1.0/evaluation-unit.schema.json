@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One immutable source/target leaf that may be evaluated once per run.",
+  "properties": {
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "path": {
+      "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+      "title": "Path",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "evaluation-unit-0.1.0",
+      "default": "evaluation-unit-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "segment_id": {
+      "pattern": "^seg_[0-9a-f]{64}$",
+      "title": "Segment Id",
+      "type": "string"
+    },
+    "source_text_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Source Text Sha256",
+      "type": "string"
+    },
+    "target_text_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Target Text Sha256",
+      "type": "string"
+    },
+    "unit_id": {
+      "pattern": "^evalunit_[0-9a-f]{64}$",
+      "title": "Unit Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "unit_id",
+    "episode_id",
+    "segment_id",
+    "path",
+    "source_text_sha256",
+    "target_text_sha256"
+  ],
+  "title": "EvaluationUnit",
+  "type": "object"
+}

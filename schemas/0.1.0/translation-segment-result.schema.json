@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "research_needed": {
+      "title": "Research Needed",
+      "type": "boolean"
+    },
+    "segment_id": {
+      "pattern": "^seg_[0-9a-f]{64}$",
+      "title": "Segment Id",
+      "type": "string"
+    },
+    "target_text": {
+      "minLength": 1,
+      "title": "Target Text",
+      "type": "string"
+    },
+    "uncertainty_tags": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Uncertainty Tags",
+      "type": "array"
+    }
+  },
+  "required": [
+    "segment_id",
+    "target_text",
+    "research_needed",
+    "uncertainty_tags"
+  ],
+  "title": "SegmentTranslation",
+  "type": "object"
+}

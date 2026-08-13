@@ -1,0 +1,96 @@
+{
+  "$defs": {
+    "Segment": {
+      "additionalProperties": false,
+      "description": "One policy-approved, source-owned textual leaf.",
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "field_policy_version": {
+          "minLength": 1,
+          "title": "Field Policy Version",
+          "type": "string"
+        },
+        "json_pointer": {
+          "pattern": "^/(?:[^/~]|~[01])+(?:/[^/]*)*$",
+          "title": "Json Pointer",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "translation-segment-0.1.0",
+          "default": "translation-segment-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "segment_id": {
+          "pattern": "^seg_[0-9a-f]{64}$",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "source_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Source Sha256",
+          "type": "string"
+        },
+        "source_text": {
+          "title": "Source Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "segment_id",
+        "episode_id",
+        "json_pointer",
+        "source_text",
+        "source_sha256",
+        "field_policy_version"
+      ],
+      "title": "Segment",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Deterministic extract request; all omitted fields remain host-owned.",
+  "properties": {
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "field_policy_version": {
+      "minLength": 1,
+      "title": "Field Policy Version",
+      "type": "string"
+    },
+    "input_variant_id": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Input Variant Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "segment-extraction-0.1.0",
+      "default": "segment-extraction-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/Segment"
+      },
+      "title": "Segments",
+      "type": "array"
+    }
+  },
+  "required": [
+    "episode_id",
+    "input_variant_id",
+    "field_policy_version",
+    "segments"
+  ],
+  "title": "SegmentExtraction",
+  "type": "object"
+}

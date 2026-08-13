@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "fail_count": {
+      "minimum": 0,
+      "title": "Fail Count",
+      "type": "integer"
+    },
+    "needs_human_review_count": {
+      "minimum": 0,
+      "title": "Needs Human Review Count",
+      "type": "integer"
+    },
+    "pass_count": {
+      "minimum": 0,
+      "title": "Pass Count",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "pass_count",
+    "needs_human_review_count",
+    "fail_count"
+  ],
+  "title": "OutcomeSummary",
+  "type": "object"
+}

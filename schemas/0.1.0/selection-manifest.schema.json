@@ -1,0 +1,199 @@
+{
+  "$defs": {
+    "RankedMembership": {
+      "additionalProperties": false,
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "rank": {
+          "exclusiveMinimum": 0,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "reserve_rank": {
+          "exclusiveMinimum": 0,
+          "title": "Reserve Rank",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rank",
+        "reserve_rank",
+        "episode_id"
+      ],
+      "title": "RankedMembership",
+      "type": "object"
+    },
+    "ReserveQueueEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "rank": {
+          "exclusiveMinimum": 0,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "rank_key": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Rank Key",
+          "type": "string"
+        },
+        "stratum": {
+          "$ref": "#/$defs/SelectionStratum"
+        }
+      },
+      "required": [
+        "rank",
+        "episode_id",
+        "stratum",
+        "rank_key"
+      ],
+      "title": "ReserveQueueEntry",
+      "type": "object"
+    },
+    "SelectionStratum": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "call_shape": {
+          "minLength": 1,
+          "title": "Call Shape",
+          "type": "string"
+        },
+        "dataset_namespace": {
+          "minLength": 1,
+          "title": "Dataset Namespace",
+          "type": "string"
+        },
+        "domain": {
+          "minLength": 1,
+          "title": "Domain",
+          "type": "string"
+        },
+        "length_bucket": {
+          "minLength": 1,
+          "title": "Length Bucket",
+          "type": "string"
+        },
+        "tool_count": {
+          "minimum": 0,
+          "title": "Tool Count",
+          "type": "integer"
+        },
+        "tool_family": {
+          "minLength": 1,
+          "title": "Tool Family",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset_namespace",
+        "action",
+        "call_shape",
+        "tool_family",
+        "domain",
+        "length_bucket",
+        "tool_count"
+      ],
+      "title": "SelectionStratum",
+      "type": "object"
+    },
+    "TierMembership": {
+      "additionalProperties": false,
+      "properties": {
+        "episode_ids": {
+          "items": {
+            "pattern": "^ep_[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Episode Ids",
+          "type": "array"
+        },
+        "tier": {
+          "$ref": "#/$defs/TierName"
+        }
+      },
+      "required": [
+        "tier",
+        "episode_ids"
+      ],
+      "title": "TierMembership",
+      "type": "object"
+    },
+    "TierName": {
+      "enum": [
+        "S30",
+        "S100",
+        "S250",
+        "S400"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "master_membership": {
+      "items": {
+        "$ref": "#/$defs/RankedMembership"
+      },
+      "maxItems": 400,
+      "minItems": 400,
+      "title": "Master Membership",
+      "type": "array"
+    },
+    "ranked_reserve_queue": {
+      "items": {
+        "$ref": "#/$defs/ReserveQueueEntry"
+      },
+      "minItems": 400,
+      "title": "Ranked Reserve Queue",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "selection-manifest-0.1.0",
+      "default": "selection-manifest-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selection_manifest_id": {
+      "pattern": "^selection_[0-9a-f]{64}$",
+      "title": "Selection Manifest Id",
+      "type": "string"
+    },
+    "selection_policy_version": {
+      "const": "selection-policy-0.1.0",
+      "default": "selection-policy-0.1.0",
+      "title": "Selection Policy Version",
+      "type": "string"
+    },
+    "tiers": {
+      "items": {
+        "$ref": "#/$defs/TierMembership"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Tiers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "selection_manifest_id",
+    "ranked_reserve_queue",
+    "master_membership",
+    "tiers"
+  ],
+  "title": "SelectionManifest",
+  "type": "object"
+}

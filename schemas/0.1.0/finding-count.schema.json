@@ -1,0 +1,52 @@
+{
+  "$defs": {
+    "MqmCategory": {
+      "enum": [
+        "accuracy.mistranslation",
+        "accuracy.omission",
+        "accuracy.addition",
+        "accuracy.untranslated",
+        "terminology",
+        "fluency.grammar",
+        "fluency.spelling",
+        "fluency.punctuation",
+        "locale_convention",
+        "style.register",
+        "tool_semantics",
+        "protected_content",
+        "research_provenance"
+      ],
+      "type": "string"
+    },
+    "MqmSeverity": {
+      "enum": [
+        "minor",
+        "major",
+        "critical"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "category": {
+      "$ref": "#/$defs/MqmCategory"
+    },
+    "count": {
+      "exclusiveMinimum": 0,
+      "title": "Count",
+      "type": "integer"
+    },
+    "severity": {
+      "$ref": "#/$defs/MqmSeverity"
+    }
+  },
+  "required": [
+    "category",
+    "severity",
+    "count"
+  ],
+  "title": "FindingCount",
+  "type": "object"
+}

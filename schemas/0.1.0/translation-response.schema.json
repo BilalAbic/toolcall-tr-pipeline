@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "SegmentTranslation": {
+      "additionalProperties": false,
+      "properties": {
+        "research_needed": {
+          "title": "Research Needed",
+          "type": "boolean"
+        },
+        "segment_id": {
+          "pattern": "^seg_[0-9a-f]{64}$",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "target_text": {
+          "minLength": 1,
+          "title": "Target Text",
+          "type": "string"
+        },
+        "uncertainty_tags": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Uncertainty Tags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "segment_id",
+        "target_text",
+        "research_needed",
+        "uncertainty_tags"
+      ],
+      "title": "SegmentTranslation",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A provider-shaped result; valid JSON alone never establishes acceptance.",
+  "properties": {
+    "request_id": {
+      "pattern": "^trq_[0-9a-f]{64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "translation-response-0.1.0",
+      "default": "translation-response-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/SegmentTranslation"
+      },
+      "minItems": 1,
+      "title": "Segments",
+      "type": "array"
+    },
+    "status": {
+      "enum": [
+        "translated",
+        "research_needed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "term_queries": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Term Queries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "request_id",
+    "status",
+    "segments",
+    "term_queries"
+  ],
+  "title": "TranslationResponse",
+  "type": "object"
+}

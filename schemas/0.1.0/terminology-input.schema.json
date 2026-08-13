@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+      "title": "Path",
+      "type": "string"
+    },
+    "policy_state": {
+      "enum": [
+        "resolved",
+        "manual_policy_required"
+      ],
+      "title": "Policy State",
+      "type": "string"
+    },
+    "segment_id": {
+      "pattern": "^seg_[0-9a-f]{64}$",
+      "title": "Segment Id",
+      "type": "string"
+    },
+    "text": {
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "segment_id",
+    "path",
+    "text",
+    "policy_state"
+  ],
+  "title": "TerminologyInput",
+  "type": "object"
+}

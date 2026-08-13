@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "JudgeFindingOutput": {
+      "additionalProperties": false,
+      "description": "Provider-returned atomic finding before host-side content addressing.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/MqmCategory"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/MqmSeverity"
+        },
+        "source_excerpt": {
+          "minLength": 1,
+          "title": "Source Excerpt",
+          "type": "string"
+        },
+        "target_excerpt": {
+          "minLength": 1,
+          "title": "Target Excerpt",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "severity",
+        "source_excerpt",
+        "target_excerpt",
+        "rationale"
+      ],
+      "title": "JudgeFindingOutput",
+      "type": "object"
+    },
+    "ModelConclusion": {
+      "enum": [
+        "pass",
+        "needs_human_review",
+        "fail"
+      ],
+      "type": "string"
+    },
+    "MqmCategory": {
+      "enum": [
+        "accuracy.mistranslation",
+        "accuracy.omission",
+        "accuracy.addition",
+        "accuracy.untranslated",
+        "terminology",
+        "fluency.grammar",
+        "fluency.spelling",
+        "fluency.punctuation",
+        "locale_convention",
+        "style.register",
+        "tool_semantics",
+        "protected_content",
+        "research_provenance"
+      ],
+      "type": "string"
+    },
+    "MqmSeverity": {
+      "enum": [
+        "minor",
+        "major",
+        "critical"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "All fields are required so the strict Responses schema is provider-valid.",
+  "properties": {
+    "conclusion": {
+      "$ref": "#/$defs/ModelConclusion"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/JudgeFindingOutput"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "unresolved_reasons": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Unresolved Reasons",
+      "type": "array"
+    }
+  },
+  "required": [
+    "conclusion",
+    "findings",
+    "unresolved_reasons"
+  ],
+  "title": "JudgeOutput",
+  "type": "object"
+}

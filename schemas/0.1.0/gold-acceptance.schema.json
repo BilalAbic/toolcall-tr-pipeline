@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A policy result.  A model-only verdict is always pending and non-gold.",
+  "properties": {
+    "acceptance_authority": {
+      "anyOf": [
+        {
+          "const": "human",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Acceptance Authority"
+    },
+    "gold_eligible": {
+      "title": "Gold Eligible",
+      "type": "boolean"
+    },
+    "human_review_id": {
+      "anyOf": [
+        {
+          "pattern": "^humanreview_[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Human Review Id"
+    },
+    "schema_version": {
+      "const": "gold-acceptance-0.1.0",
+      "default": "gold-acceptance-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "pending_human_review",
+        "human_rejected",
+        "human_accepted"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "verdict_id": {
+      "pattern": "^evalverdict_[0-9a-f]{64}$",
+      "title": "Verdict Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "verdict_id",
+    "human_review_id",
+    "status",
+    "gold_eligible",
+    "acceptance_authority"
+  ],
+  "title": "GoldAcceptance",
+  "type": "object"
+}

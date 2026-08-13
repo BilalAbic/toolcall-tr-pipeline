@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "GroundingOrigin": {
+      "enum": [
+        "explicit_user",
+        "prior_turn",
+        "tool_result",
+        "system_context",
+        "deterministic_default",
+        "derived",
+        "must_not_infer",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "SelectionStratum": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "call_shape": {
+          "minLength": 1,
+          "title": "Call Shape",
+          "type": "string"
+        },
+        "dataset_namespace": {
+          "minLength": 1,
+          "title": "Dataset Namespace",
+          "type": "string"
+        },
+        "domain": {
+          "minLength": 1,
+          "title": "Domain",
+          "type": "string"
+        },
+        "length_bucket": {
+          "minLength": 1,
+          "title": "Length Bucket",
+          "type": "string"
+        },
+        "tool_count": {
+          "minimum": 0,
+          "title": "Tool Count",
+          "type": "integer"
+        },
+        "tool_family": {
+          "minLength": 1,
+          "title": "Tool Family",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset_namespace",
+        "action",
+        "call_shape",
+        "tool_family",
+        "domain",
+        "length_bucket",
+        "tool_count"
+      ],
+      "title": "SelectionStratum",
+      "type": "object"
+    },
+    "SourceVerdict": {
+      "enum": [
+        "source_valid",
+        "source_review",
+        "source_invalid"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "argument_grounding": {
+      "items": {
+        "$ref": "#/$defs/GroundingOrigin"
+      },
+      "title": "Argument Grounding",
+      "type": "array"
+    },
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "human_adjudicated": {
+      "title": "Human Adjudicated",
+      "type": "boolean"
+    },
+    "source_verdict": {
+      "$ref": "#/$defs/SourceVerdict"
+    },
+    "stratum": {
+      "$ref": "#/$defs/SelectionStratum"
+    },
+    "unresolved_hard_conflict": {
+      "title": "Unresolved Hard Conflict",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "episode_id",
+    "stratum",
+    "source_verdict",
+    "human_adjudicated",
+    "argument_grounding",
+    "unresolved_hard_conflict"
+  ],
+  "title": "SelectionCandidate",
+  "type": "object"
+}

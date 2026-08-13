@@ -1,0 +1,39 @@
+{
+  "$defs": {
+    "RetryDisposition": {
+      "description": "A classification for an operator; the adapters never retry automatically.",
+      "enum": [
+        "not_applicable",
+        "do_not_retry",
+        "manual_retry_candidate"
+      ],
+      "title": "RetryDisposition",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The fixed zero automatic-retry budget prevents accidental duplicate charges.",
+  "properties": {
+    "automatic_retry_budget": {
+      "const": 0,
+      "default": 0,
+      "title": "Automatic Retry Budget",
+      "type": "integer"
+    },
+    "disposition": {
+      "$ref": "#/$defs/RetryDisposition"
+    },
+    "reason": {
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "disposition",
+    "reason"
+  ],
+  "title": "RetryBudgetClassification",
+  "type": "object"
+}

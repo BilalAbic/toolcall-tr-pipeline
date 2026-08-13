@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Content-derived evidence connecting an immutable JSON source to JSONL.",
+  "properties": {
+    "conversion_id": {
+      "pattern": "^convert_[0-9a-f]{64}$",
+      "title": "Conversion Id",
+      "type": "string"
+    },
+    "input_byte_size": {
+      "minimum": 0,
+      "title": "Input Byte Size",
+      "type": "integer"
+    },
+    "input_file_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Input File Sha256",
+      "type": "string"
+    },
+    "input_record_count": {
+      "minimum": 0,
+      "title": "Input Record Count",
+      "type": "integer"
+    },
+    "output_byte_size": {
+      "minimum": 0,
+      "title": "Output Byte Size",
+      "type": "integer"
+    },
+    "output_file_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Output File Sha256",
+      "type": "string"
+    },
+    "output_record_count": {
+      "minimum": 0,
+      "title": "Output Record Count",
+      "type": "integer"
+    },
+    "output_relative_path": {
+      "minLength": 1,
+      "title": "Output Relative Path",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "json-array-conversion-0.1.0",
+      "default": "json-array-conversion-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "conversion_id",
+    "input_file_sha256",
+    "input_byte_size",
+    "input_record_count",
+    "output_file_sha256",
+    "output_byte_size",
+    "output_record_count",
+    "output_relative_path"
+  ],
+  "title": "JsonArrayConversionReport",
+  "type": "object"
+}

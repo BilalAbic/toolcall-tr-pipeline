@@ -1,0 +1,223 @@
+{
+  "$defs": {
+    "ConflictCandidate": {
+      "additionalProperties": false,
+      "description": "A behavior pair that requires review and carries no automatic disposition.",
+      "properties": {
+        "automatic_drop": {
+          "const": false,
+          "default": false,
+          "title": "Automatic Drop",
+          "type": "boolean"
+        },
+        "call_multiset_same": {
+          "title": "Call Multiset Same",
+          "type": "boolean"
+        },
+        "comparison": {
+          "enum": [
+            "hard_conflict",
+            "order_ambiguity_review"
+          ],
+          "title": "Comparison",
+          "type": "string"
+        },
+        "conflict_id": {
+          "pattern": "^conf_[0-9a-f]{64}$",
+          "title": "Conflict Id",
+          "type": "string"
+        },
+        "left_member_episode_ids": {
+          "items": {
+            "pattern": "^ep_[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Left Member Episode Ids",
+          "type": "array"
+        },
+        "left_ordered_behavior_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Left Ordered Behavior Fingerprint",
+          "type": "string"
+        },
+        "left_owner_episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Left Owner Episode Id",
+          "type": "string"
+        },
+        "presented_context_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Presented Context Fingerprint",
+          "type": "string"
+        },
+        "resolution": {
+          "const": "unresolved",
+          "default": "unresolved",
+          "title": "Resolution",
+          "type": "string"
+        },
+        "review_required": {
+          "const": true,
+          "default": true,
+          "title": "Review Required",
+          "type": "boolean"
+        },
+        "right_member_episode_ids": {
+          "items": {
+            "pattern": "^ep_[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Right Member Episode Ids",
+          "type": "array"
+        },
+        "right_ordered_behavior_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Right Ordered Behavior Fingerprint",
+          "type": "string"
+        },
+        "right_owner_episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Right Owner Episode Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "conflict-candidate-0.1.0",
+          "default": "conflict-candidate-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "conflict_id",
+        "comparison",
+        "presented_context_fingerprint",
+        "left_ordered_behavior_fingerprint",
+        "right_ordered_behavior_fingerprint",
+        "left_owner_episode_id",
+        "right_owner_episode_id",
+        "left_member_episode_ids",
+        "right_member_episode_ids",
+        "call_multiset_same"
+      ],
+      "title": "ConflictCandidate",
+      "type": "object"
+    },
+    "ExactDuplicateGroup": {
+      "additionalProperties": false,
+      "description": "One exact context/behavior group with a deterministic reporting owner.",
+      "properties": {
+        "alias_episode_ids": {
+          "items": {
+            "pattern": "^ep_[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Alias Episode Ids",
+          "type": "array"
+        },
+        "automatic_drop": {
+          "const": false,
+          "default": false,
+          "title": "Automatic Drop",
+          "type": "boolean"
+        },
+        "member_episode_ids": {
+          "items": {
+            "pattern": "^ep_[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Member Episode Ids",
+          "type": "array"
+        },
+        "ordered_behavior_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Ordered Behavior Fingerprint",
+          "type": "string"
+        },
+        "owner_episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Owner Episode Id",
+          "type": "string"
+        },
+        "presented_context_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Presented Context Fingerprint",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "exact-duplicate-0.1.0",
+          "default": "exact-duplicate-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "presented_context_fingerprint",
+        "ordered_behavior_fingerprint",
+        "owner_episode_id",
+        "alias_episode_ids",
+        "member_episode_ids"
+      ],
+      "title": "ExactDuplicateGroup",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Stable derived view over all audited episode identities.",
+  "properties": {
+    "audit_id": {
+      "pattern": "^audit_[0-9a-f]{64}$",
+      "title": "Audit Id",
+      "type": "string"
+    },
+    "automatic_drop_episode_ids": {
+      "items": {
+        "pattern": "^ep_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "title": "Automatic Drop Episode Ids",
+      "type": "array"
+    },
+    "conflict_candidates": {
+      "items": {
+        "$ref": "#/$defs/ConflictCandidate"
+      },
+      "title": "Conflict Candidates",
+      "type": "array"
+    },
+    "duplicate_groups": {
+      "items": {
+        "$ref": "#/$defs/ExactDuplicateGroup"
+      },
+      "title": "Duplicate Groups",
+      "type": "array"
+    },
+    "episode_ids": {
+      "items": {
+        "pattern": "^ep_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "title": "Episode Ids",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "exact-conflict-audit-0.1.0",
+      "default": "exact-conflict-audit-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "audit_id",
+    "episode_ids",
+    "duplicate_groups",
+    "conflict_candidates",
+    "automatic_drop_episode_ids"
+  ],
+  "title": "ExactConflictAudit",
+  "type": "object"
+}

@@ -1,0 +1,286 @@
+{
+  "$defs": {
+    "Diagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "diagnostic_catalog_version": {
+          "const": "0.1.0",
+          "default": "0.1.0",
+          "title": "Diagnostic Catalog Version",
+          "type": "string"
+        },
+        "episode_id": {
+          "anyOf": [
+            {
+              "pattern": "^ep_[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Episode Id"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "json_pointer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Json Pointer"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "diagnostic-0.1.0",
+          "default": "diagnostic-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "source_line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Line"
+        },
+        "source_occurrence_id": {
+          "anyOf": [
+            {
+              "pattern": "^occ_[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Occurrence Id"
+        },
+        "stage": {
+          "minLength": 1,
+          "title": "Stage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "stage",
+        "severity",
+        "source_occurrence_id",
+        "episode_id",
+        "json_pointer",
+        "source_line",
+        "message",
+        "retryable",
+        "evidence_refs"
+      ],
+      "title": "Diagnostic",
+      "type": "object"
+    },
+    "JsonScalar": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonScalar"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "byte_length": {
+      "minimum": 0,
+      "title": "Byte Length",
+      "type": "integer"
+    },
+    "byte_offset": {
+      "minimum": 0,
+      "title": "Byte Offset",
+      "type": "integer"
+    },
+    "dataset_namespace": {
+      "minLength": 1,
+      "title": "Dataset Namespace",
+      "type": "string"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/Diagnostic"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "observed_paths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Observed Paths",
+      "type": "array"
+    },
+    "parsed_record": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Parsed Record"
+    },
+    "raw_record_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Raw Record Sha256",
+      "type": "string"
+    },
+    "raw_record_utf8": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Raw Record Utf8"
+    },
+    "relative_file_path": {
+      "minLength": 1,
+      "title": "Relative File Path",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "bronze-record-0.1.0",
+      "default": "bronze-record-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "snapshot_id": {
+      "pattern": "^snap_[0-9a-f]{64}$",
+      "title": "Snapshot Id",
+      "type": "string"
+    },
+    "source_line": {
+      "exclusiveMinimum": 0,
+      "title": "Source Line",
+      "type": "integer"
+    },
+    "source_native_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Native Id"
+    },
+    "source_occurrence_id": {
+      "pattern": "^occ_[0-9a-f]{64}$",
+      "title": "Source Occurrence Id",
+      "type": "string"
+    },
+    "source_sequence": {
+      "exclusiveMinimum": 0,
+      "title": "Source Sequence",
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "valid",
+        "quarantined"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "dataset_namespace",
+    "snapshot_id",
+    "source_occurrence_id",
+    "source_sequence",
+    "relative_file_path",
+    "byte_offset",
+    "byte_length",
+    "source_line",
+    "raw_record_sha256",
+    "raw_record_utf8",
+    "parsed_record",
+    "source_native_id",
+    "observed_paths",
+    "status",
+    "diagnostics"
+  ],
+  "title": "BronzeRecord",
+  "type": "object"
+}

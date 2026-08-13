@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "WilsonConfidenceInterval": {
+      "additionalProperties": false,
+      "description": "A standard-library Wilson 95% confidence interval for a binomial rate.",
+      "properties": {
+        "estimate": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Estimate",
+          "type": "number"
+        },
+        "lower": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Lower",
+          "type": "number"
+        },
+        "method": {
+          "const": "wilson-95",
+          "default": "wilson-95",
+          "title": "Method",
+          "type": "string"
+        },
+        "successes": {
+          "minimum": 0,
+          "title": "Successes",
+          "type": "integer"
+        },
+        "trials": {
+          "exclusiveMinimum": 0,
+          "title": "Trials",
+          "type": "integer"
+        },
+        "upper": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Upper",
+          "type": "number"
+        }
+      },
+      "required": [
+        "successes",
+        "trials",
+        "estimate",
+        "lower",
+        "upper"
+      ],
+      "title": "WilsonConfidenceInterval",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "coverage": {
+      "$ref": "#/$defs/WilsonConfidenceInterval"
+    },
+    "requested_units": {
+      "exclusiveMinimum": 0,
+      "title": "Requested Units",
+      "type": "integer"
+    },
+    "uncovered_unit_ids": {
+      "items": {
+        "pattern": "^evalunit_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "title": "Uncovered Unit Ids",
+      "type": "array"
+    },
+    "verdict_units": {
+      "minimum": 0,
+      "title": "Verdict Units",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "requested_units",
+    "verdict_units",
+    "uncovered_unit_ids",
+    "coverage"
+  ],
+  "title": "CoverageSummary",
+  "type": "object"
+}

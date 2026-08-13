@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Pinned, content-addressed identity for one render implementation.\n\nThe renderer and tokenizer are intentionally named and revision-pinned here\nrather than being discovered from a local cache or a remote model registry.\n``truncation_policy`` has only a rejecting mode: a partial target must never\nbecome a trainable example.  The final payload is the JCS representation of\nthe final canonical assistant message, which gives every implementation one\nunambiguous generic completion representation.",
+  "properties": {
+    "add_generation_prompt": {
+      "const": false,
+      "default": false,
+      "title": "Add Generation Prompt",
+      "type": "boolean"
+    },
+    "chat_template_id": {
+      "minLength": 1,
+      "title": "Chat Template Id",
+      "type": "string"
+    },
+    "chat_template_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Chat Template Sha256",
+      "type": "string"
+    },
+    "max_rendered_characters": {
+      "exclusiveMinimum": 0,
+      "title": "Max Rendered Characters",
+      "type": "integer"
+    },
+    "max_tokens": {
+      "exclusiveMinimum": 0,
+      "title": "Max Tokens",
+      "type": "integer"
+    },
+    "render_config_id": {
+      "pattern": "^rendercfg_[0-9a-f]{64}$",
+      "title": "Render Config Id",
+      "type": "string"
+    },
+    "renderer_id": {
+      "minLength": 1,
+      "title": "Renderer Id",
+      "type": "string"
+    },
+    "renderer_revision": {
+      "minLength": 1,
+      "title": "Renderer Revision",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "render-config-0.1.0",
+      "default": "render-config-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tokenizer_id": {
+      "minLength": 1,
+      "title": "Tokenizer Id",
+      "type": "string"
+    },
+    "tokenizer_revision": {
+      "minLength": 1,
+      "title": "Tokenizer Revision",
+      "type": "string"
+    },
+    "truncation_policy": {
+      "const": "reject",
+      "default": "reject",
+      "title": "Truncation Policy",
+      "type": "string"
+    }
+  },
+  "required": [
+    "render_config_id",
+    "renderer_id",
+    "renderer_revision",
+    "chat_template_id",
+    "chat_template_sha256",
+    "tokenizer_id",
+    "tokenizer_revision",
+    "max_rendered_characters",
+    "max_tokens"
+  ],
+  "title": "RenderConfig",
+  "type": "object"
+}

@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+.coverage
+htmlcov/
+.env
+
+# Immutable, downloaded upstream source snapshots. Never commit source data.
+sources/
+
+# Runtime outputs are immutable local artifacts, never source-controlled data.
+artifacts/
+events/
+indexes/
+manifests/
+quarantine/

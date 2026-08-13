@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "EgressViolation": {
+      "additionalProperties": false,
+      "description": "A finding without the matched sensitive value.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/EgressViolationCategory"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "redactable": {
+          "title": "Redactable",
+          "type": "boolean"
+        },
+        "rule_id": {
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rule_id",
+        "category",
+        "start",
+        "end",
+        "redactable"
+      ],
+      "title": "EgressViolation",
+      "type": "object"
+    },
+    "EgressViolationCategory": {
+      "description": "Classes of content that must not leave the local pipeline.",
+      "enum": [
+        "configuration",
+        "secret",
+        "pii",
+        "local_path",
+        "private_endpoint",
+        "endpoint"
+      ],
+      "title": "EgressViolationCategory",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A redaction-safe security decision; it never stores the request payload.",
+  "properties": {
+    "allowed": {
+      "title": "Allowed",
+      "type": "boolean"
+    },
+    "endpoint": {
+      "minLength": 1,
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "payload_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Payload Sha256",
+      "type": "string"
+    },
+    "provider": {
+      "minLength": 1,
+      "title": "Provider",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "live-preflight-0.1.0",
+      "default": "live-preflight-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "violations": {
+      "items": {
+        "$ref": "#/$defs/EgressViolation"
+      },
+      "title": "Violations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "provider",
+    "endpoint",
+    "payload_sha256",
+    "allowed",
+    "violations"
+  ],
+  "title": "LivePreflightDecision",
+  "type": "object"
+}

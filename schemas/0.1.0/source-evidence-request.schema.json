@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "ArgumentEvidenceInput": {
+      "additionalProperties": false,
+      "description": "Explicit evidence supplied by an adapter or human; never inferred from text.",
+      "properties": {
+        "argument_pointer": {
+          "pattern": "^/(?:[^/~]|~[01])+(?:/[^/]*)*$",
+          "title": "Argument Pointer",
+          "type": "string"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "evidence_pointers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Pointers",
+          "type": "array"
+        },
+        "input_pointers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Input Pointers",
+          "type": "array"
+        },
+        "origin": {
+          "$ref": "#/$defs/ArgumentOrigin"
+        },
+        "transformation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transformation Id"
+        }
+      },
+      "required": [
+        "call_id",
+        "argument_pointer",
+        "origin",
+        "evidence_pointers",
+        "input_pointers"
+      ],
+      "title": "ArgumentEvidenceInput",
+      "type": "object"
+    },
+    "ArgumentOrigin": {
+      "enum": [
+        "explicit_user",
+        "prior_turn",
+        "tool_result",
+        "system_context",
+        "deterministic_default",
+        "derived",
+        "must_not_infer",
+        "unknown"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One explicitly accounted Pass 1 request for a canonical episode.",
+  "properties": {
+    "argument_evidence": {
+      "items": {
+        "$ref": "#/$defs/ArgumentEvidenceInput"
+      },
+      "title": "Argument Evidence",
+      "type": "array"
+    },
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "source-evidence-request-0.1.0",
+      "default": "source-evidence-request-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "episode_id",
+    "argument_evidence"
+  ],
+  "title": "SourceEvidenceRequest",
+  "type": "object"
+}

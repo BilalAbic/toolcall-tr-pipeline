@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "code": {
+      "minLength": 1,
+      "title": "Code",
+      "type": "string"
+    },
+    "diagnostic_catalog_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Diagnostic Catalog Version",
+      "type": "string"
+    },
+    "episode_id": {
+      "anyOf": [
+        {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Episode Id"
+    },
+    "evidence_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "json_pointer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Json Pointer"
+    },
+    "message": {
+      "minLength": 1,
+      "title": "Message",
+      "type": "string"
+    },
+    "retryable": {
+      "title": "Retryable",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": "diagnostic-0.1.0",
+      "default": "diagnostic-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "info",
+        "warning",
+        "error"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "source_line": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Line"
+    },
+    "source_occurrence_id": {
+      "anyOf": [
+        {
+          "pattern": "^occ_[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Occurrence Id"
+    },
+    "stage": {
+      "minLength": 1,
+      "title": "Stage",
+      "type": "string"
+    }
+  },
+  "required": [
+    "code",
+    "stage",
+    "severity",
+    "source_occurrence_id",
+    "episode_id",
+    "json_pointer",
+    "source_line",
+    "message",
+    "retryable",
+    "evidence_refs"
+  ],
+  "title": "Diagnostic",
+  "type": "object"
+}

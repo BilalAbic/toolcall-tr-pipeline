@@ -1,0 +1,138 @@
+{
+  "$defs": {
+    "SnapshotFile": {
+      "additionalProperties": false,
+      "properties": {
+        "record_count": {
+          "minimum": 0,
+          "title": "Record Count",
+          "type": "integer"
+        },
+        "relative_path": {
+          "minLength": 1,
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 0,
+          "title": "Size",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "relative_path",
+        "sha256",
+        "size",
+        "record_count"
+      ],
+      "title": "SnapshotFile",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "dataset_namespace": {
+      "minLength": 1,
+      "title": "Dataset Namespace",
+      "type": "string"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/SnapshotFile"
+      },
+      "minItems": 1,
+      "title": "Files",
+      "type": "array"
+    },
+    "id_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Id Version",
+      "type": "integer"
+    },
+    "license_id": {
+      "minLength": 1,
+      "title": "License Id",
+      "type": "string"
+    },
+    "license_url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "License Url"
+    },
+    "schema_version": {
+      "const": "source-snapshot-0.1.0",
+      "default": "source-snapshot-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "snapshot_id": {
+      "pattern": "^snap_[0-9a-f]{64}$",
+      "title": "Snapshot Id",
+      "type": "string"
+    },
+    "source_config": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Config"
+    },
+    "source_revision": {
+      "minLength": 1,
+      "title": "Source Revision",
+      "type": "string"
+    },
+    "source_split": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Split"
+    },
+    "total_record_count": {
+      "minimum": 0,
+      "title": "Total Record Count",
+      "type": "integer"
+    },
+    "total_size": {
+      "minimum": 0,
+      "title": "Total Size",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "snapshot_id",
+    "dataset_namespace",
+    "source_revision",
+    "source_config",
+    "source_split",
+    "license_id",
+    "license_url",
+    "files",
+    "total_size",
+    "total_record_count"
+  ],
+  "title": "SourceSnapshot",
+  "type": "object"
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "diagnostic-catalog-0.1.0",
+  "catalog_version": "0.1.0",
+  "entries": [
+    {"code":"PARSE_INVALID_JSON","stage":"ingest","severity":"error","retryable":false,"meaning":"Record is not valid JSON."},
+    {"code":"PARSE_DUPLICATE_KEY","stage":"ingest","severity":"error","retryable":false,"meaning":"JSON object contains a duplicate key."},
+    {"code":"PARSE_NON_FINITE_NUMBER","stage":"ingest","severity":"error","retryable":false,"meaning":"JSON contains NaN or Infinity."},
+    {"code":"PARSE_INVALID_UTF8","stage":"ingest","severity":"error","retryable":false,"meaning":"Physical record is not valid UTF-8."},
+    {"code":"PARSE_INVALID_UNICODE","stage":"ingest","severity":"error","retryable":false,"meaning":"Decoded JSON contains an unpaired Unicode surrogate."},
+    {"code":"PARSE_EMPTY_RECORD","stage":"ingest","severity":"error","retryable":false,"meaning":"Physical JSONL record is empty."},
+    {"code":"PARSE_RECORD_TOO_LARGE","stage":"ingest","severity":"error","retryable":false,"meaning":"Physical record exceeds the configured byte limit."},
+    {"code":"SCHEMA_EXPECTED_OBJECT","stage":"ingest","severity":"error","retryable":false,"meaning":"Top-level source record must be a JSON object."},
+    {"code":"SCHEMA_CANONICAL_INVALID","stage":"canonicalize","severity":"error","retryable":false,"meaning":"Canonical episode violates the strict schema or state machine."},
+    {"code":"SCHEMA_UNSUPPORTED_KEYWORD","stage":"registry","severity":"error","retryable":false,"meaning":"Tool schema contains a keyword outside the versioned policy."},
+    {"code":"SCHEMA_DUPLICATE_SET_VALUE","stage":"registry","severity":"error","retryable":false,"meaning":"Set-like schema list contains a duplicate value."},
+    {"code":"TOOL_DEFINITION_INVALID","stage":"registry","severity":"error","retryable":false,"meaning":"Tool definition cannot be normalized."},
+    {"code":"TOOL_NAME_UNRESOLVED","stage":"canonicalize","severity":"error","retryable":false,"meaning":"A call name does not resolve exactly once in the presented tool list."},
+    {"code":"TOOL_ARGUMENT_SCHEMA_INVALID","stage":"canonicalize","severity":"error","retryable":false,"meaning":"Tool arguments violate the resolved parameter schema."},
+    {"code":"SOURCE_ADAPTER_MISSING_FIELD","stage":"adapter","severity":"error","retryable":false,"meaning":"Source adapter required field is absent."},
+    {"code":"SOURCE_ADAPTER_INVALID_FIELD","stage":"adapter","severity":"error","retryable":false,"meaning":"Source adapter field has an invalid type or value."},
+    {"code":"SOURCE_ARG_NOT_GROUNDED","stage":"source_semantic","severity":"error","retryable":false,"meaning":"Argument has no permitted source evidence."},
+    {"code":"CONFLICT_ORDER_AMBIGUITY","stage":"dedup","severity":"warning","retryable":false,"meaning":"Calls differ only by order while execution topology is unknown."},
+    {"code":"RELEASE_ARTIFACT_EXISTS","stage":"publish","severity":"error","retryable":false,"meaning":"Immutable content-addressed publish target already exists."},
+    {"code":"RELEASE_ARTIFACT_VALIDATION_FAILED","stage":"publish","severity":"error","retryable":false,"meaning":"Temporary artifact failed validation and was not published."},
+    {"code":"RELEASE_EVENT_CHAIN_INVALID","stage":"events","severity":"error","retryable":false,"meaning":"Event hash chain or event sequence is invalid."}
+  ]
+}

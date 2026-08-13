@@ -1,0 +1,119 @@
+{
+  "$defs": {
+    "DecisionAction": {
+      "enum": [
+        "tool_call",
+        "clarification",
+        "tool_unavailable",
+        "direct_answer",
+        "final_answer"
+      ],
+      "title": "DecisionAction",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A human-promoted full segment, immutable once emitted as JSONL.",
+  "properties": {
+    "argument_policy_version": {
+      "minLength": 1,
+      "title": "Argument Policy Version",
+      "type": "string"
+    },
+    "decision_action": {
+      "$ref": "#/$defs/DecisionAction"
+    },
+    "field_policy_version": {
+      "minLength": 1,
+      "title": "Field Policy Version",
+      "type": "string"
+    },
+    "human_review_event_id": {
+      "minLength": 1,
+      "title": "Human Review Event Id",
+      "type": "string"
+    },
+    "locale_policy_version": {
+      "minLength": 1,
+      "title": "Locale Policy Version",
+      "type": "string"
+    },
+    "memory_entry_id": {
+      "pattern": "^mem_[0-9a-f]{64}$",
+      "title": "Memory Entry Id",
+      "type": "string"
+    },
+    "origin_translation_config_id": {
+      "minLength": 1,
+      "title": "Origin Translation Config Id",
+      "type": "string"
+    },
+    "presented_context_fingerprint": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Presented Context Fingerprint",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "segment-memory-0.1.0",
+      "default": "segment-memory-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "segment_source_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Segment Source Sha256",
+      "type": "string"
+    },
+    "source_text": {
+      "minLength": 1,
+      "title": "Source Text",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "superseded",
+        "revoked"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "target_text": {
+      "minLength": 1,
+      "title": "Target Text",
+      "type": "string"
+    },
+    "target_text_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Target Text Sha256",
+      "type": "string"
+    },
+    "tool_scope": {
+      "items": {
+        "pattern": "^tool_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "title": "Tool Scope",
+      "type": "array"
+    }
+  },
+  "required": [
+    "memory_entry_id",
+    "segment_source_sha256",
+    "source_text",
+    "target_text_sha256",
+    "target_text",
+    "field_policy_version",
+    "argument_policy_version",
+    "locale_policy_version",
+    "presented_context_fingerprint",
+    "tool_scope",
+    "decision_action",
+    "origin_translation_config_id",
+    "human_review_event_id",
+    "state"
+  ],
+  "title": "SegmentMemoryEntry",
+  "type": "object"
+}

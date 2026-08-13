@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "DecisionAction": {
+      "enum": [
+        "tool_call",
+        "clarification",
+        "tool_unavailable",
+        "direct_answer",
+        "final_answer"
+      ],
+      "title": "DecisionAction",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The complete exact key; normalized and partial matching are prohibited.",
+  "properties": {
+    "argument_policy_version": {
+      "minLength": 1,
+      "title": "Argument Policy Version",
+      "type": "string"
+    },
+    "decision_action": {
+      "$ref": "#/$defs/DecisionAction"
+    },
+    "field_policy_version": {
+      "minLength": 1,
+      "title": "Field Policy Version",
+      "type": "string"
+    },
+    "locale_policy_version": {
+      "minLength": 1,
+      "title": "Locale Policy Version",
+      "type": "string"
+    },
+    "presented_context_fingerprint": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Presented Context Fingerprint",
+      "type": "string"
+    },
+    "segment_source_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Segment Source Sha256",
+      "type": "string"
+    },
+    "tool_scope": {
+      "items": {
+        "pattern": "^tool_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "title": "Tool Scope",
+      "type": "array"
+    }
+  },
+  "required": [
+    "segment_source_sha256",
+    "field_policy_version",
+    "argument_policy_version",
+    "locale_policy_version",
+    "presented_context_fingerprint",
+    "tool_scope",
+    "decision_action"
+  ],
+  "title": "MemoryLookupKey",
+  "type": "object"
+}

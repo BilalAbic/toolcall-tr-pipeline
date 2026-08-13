@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "evidence_span": {
+      "minLength": 1,
+      "title": "Evidence Span",
+      "type": "string"
+    },
+    "source_type": {
+      "enum": [
+        "vendor_docs",
+        "standards_body",
+        "official_institution"
+      ],
+      "title": "Source Type",
+      "type": "string"
+    },
+    "source_url": {
+      "minLength": 1,
+      "title": "Source Url",
+      "type": "string"
+    },
+    "target": {
+      "minLength": 1,
+      "title": "Target",
+      "type": "string"
+    }
+  },
+  "required": [
+    "target",
+    "source_url",
+    "source_type",
+    "evidence_span"
+  ],
+  "title": "ResearchCandidate",
+  "type": "object"
+}

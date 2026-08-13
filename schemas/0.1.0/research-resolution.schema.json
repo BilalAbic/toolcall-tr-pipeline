@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "ResearchCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_span": {
+          "minLength": 1,
+          "title": "Evidence Span",
+          "type": "string"
+        },
+        "source_type": {
+          "enum": [
+            "vendor_docs",
+            "standards_body",
+            "official_institution"
+          ],
+          "title": "Source Type",
+          "type": "string"
+        },
+        "source_url": {
+          "minLength": 1,
+          "title": "Source Url",
+          "type": "string"
+        },
+        "target": {
+          "minLength": 1,
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "source_url",
+        "source_type",
+        "evidence_span"
+      ],
+      "title": "ResearchCandidate",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Evidence sidecar only; it never edits a canonical episode or tool field.",
+  "properties": {
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/ResearchCandidate"
+      },
+      "title": "Candidates",
+      "type": "array"
+    },
+    "request_id": {
+      "pattern": "^research_[0-9a-f]{64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "resolution_id": {
+      "pattern": "^researchres_[0-9a-f]{64}$",
+      "title": "Resolution Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "research-resolution-0.1.0",
+      "default": "research-resolution-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "resolved",
+        "conflicting",
+        "unresolved"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "resolution_id",
+    "request_id",
+    "status",
+    "candidates"
+  ],
+  "title": "ResearchResolution",
+  "type": "object"
+}

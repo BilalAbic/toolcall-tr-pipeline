@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "max_elapsed_seconds_per_episode": {
+      "const": 60,
+      "default": 60,
+      "title": "Max Elapsed Seconds Per Episode",
+      "type": "integer"
+    },
+    "max_queries_per_episode": {
+      "const": 3,
+      "default": 3,
+      "title": "Max Queries Per Episode",
+      "type": "integer"
+    },
+    "max_sources_per_episode": {
+      "const": 5,
+      "default": 5,
+      "title": "Max Sources Per Episode",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "research-budget-0.1.0",
+      "default": "research-budget-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "ResearchBudget",
+  "type": "object"
+}

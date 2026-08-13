@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Deterministic report for a bounded, non-promoting source pilot.",
+  "properties": {
+    "adapter": {
+      "minLength": 1,
+      "title": "Adapter",
+      "type": "string"
+    },
+    "audit_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Audit Id"
+    },
+    "block_reasons": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Block Reasons",
+      "type": "array"
+    },
+    "bronze_manifest_id": {
+      "minLength": 1,
+      "title": "Bronze Manifest Id",
+      "type": "string"
+    },
+    "canonical_manifest_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Canonical Manifest Id"
+    },
+    "canonical_records": {
+      "minimum": 0,
+      "title": "Canonical Records",
+      "type": "integer"
+    },
+    "input_file_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Input File Sha256",
+      "type": "string"
+    },
+    "pilot_id": {
+      "pattern": "^pilot_[0-9a-f]{64}$",
+      "title": "Pilot Id",
+      "type": "string"
+    },
+    "quarantine_manifest_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Quarantine Manifest Id"
+    },
+    "quarantined_records": {
+      "minimum": 0,
+      "title": "Quarantined Records",
+      "type": "integer"
+    },
+    "review_required_conflicts": {
+      "minimum": 0,
+      "title": "Review Required Conflicts",
+      "type": "integer"
+    },
+    "run_event_id": {
+      "minLength": 1,
+      "title": "Run Event Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "operational-pilot-0.1.0",
+      "default": "operational-pilot-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_records": {
+      "minimum": 0,
+      "title": "Source Records",
+      "type": "integer"
+    },
+    "source_snapshot_id": {
+      "pattern": "^snap_[0-9a-f]{64}$",
+      "title": "Source Snapshot Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "blocked"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "valid_records": {
+      "minimum": 0,
+      "title": "Valid Records",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "pilot_id",
+    "source_snapshot_id",
+    "input_file_sha256",
+    "adapter",
+    "run_event_id",
+    "status",
+    "source_records",
+    "valid_records",
+    "quarantined_records",
+    "canonical_records",
+    "review_required_conflicts",
+    "bronze_manifest_id",
+    "quarantine_manifest_id",
+    "canonical_manifest_id",
+    "audit_id",
+    "block_reasons"
+  ],
+  "title": "PilotRunReport",
+  "type": "object"
+}

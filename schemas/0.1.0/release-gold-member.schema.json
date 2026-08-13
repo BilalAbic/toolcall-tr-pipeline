@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One dataset episode and the exact human review that admits it to Gold.",
+  "properties": {
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "human_review_id": {
+      "pattern": "^humanreview_[0-9a-f]{64}$",
+      "title": "Human Review Id",
+      "type": "string"
+    },
+    "verdict_id": {
+      "pattern": "^evalverdict_[0-9a-f]{64}$",
+      "title": "Verdict Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "episode_id",
+    "verdict_id",
+    "human_review_id"
+  ],
+  "title": "ReleaseGoldMember",
+  "type": "object"
+}

@@ -1,0 +1,111 @@
+{
+  "$defs": {
+    "ReleaseDatasetFile": {
+      "additionalProperties": false,
+      "description": "The immutable byte and row identity of one release JSONL file.",
+      "properties": {
+        "relative_path": {
+          "minLength": 1,
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "row_count": {
+          "exclusiveMinimum": 0,
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relative_path",
+        "sha256",
+        "row_count"
+      ],
+      "title": "ReleaseDatasetFile",
+      "type": "object"
+    },
+    "ReleaseGoldMember": {
+      "additionalProperties": false,
+      "description": "One dataset episode and the exact human review that admits it to Gold.",
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "human_review_id": {
+          "pattern": "^humanreview_[0-9a-f]{64}$",
+          "title": "Human Review Id",
+          "type": "string"
+        },
+        "verdict_id": {
+          "pattern": "^evalverdict_[0-9a-f]{64}$",
+          "title": "Verdict Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "episode_id",
+        "verdict_id",
+        "human_review_id"
+      ],
+      "title": "ReleaseGoldMember",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One content-addressed, self-consistent declaration of a Gold release.",
+  "properties": {
+    "dataset_row_count": {
+      "exclusiveMinimum": 0,
+      "title": "Dataset Row Count",
+      "type": "integer"
+    },
+    "dataset_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Dataset Sha256",
+      "type": "string"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/ReleaseDatasetFile"
+      },
+      "minItems": 1,
+      "title": "Files",
+      "type": "array"
+    },
+    "gold_members": {
+      "items": {
+        "$ref": "#/$defs/ReleaseGoldMember"
+      },
+      "minItems": 1,
+      "title": "Gold Members",
+      "type": "array"
+    },
+    "release_id": {
+      "pattern": "^release_[0-9a-f]{64}$",
+      "title": "Release Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "release-manifest-0.1.0",
+      "default": "release-manifest-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "release_id",
+    "dataset_sha256",
+    "dataset_row_count",
+    "files",
+    "gold_members"
+  ],
+  "title": "ReleaseManifest",
+  "type": "object"
+}

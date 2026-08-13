@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A bounded response for exactly one extracted segment.",
+  "properties": {
+    "schema_version": {
+      "const": "segment-translation-0.1.0",
+      "default": "segment-translation-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "segment_id": {
+      "pattern": "^seg_[0-9a-f]{64}$",
+      "title": "Segment Id",
+      "type": "string"
+    },
+    "target_text": {
+      "title": "Target Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "segment_id",
+    "target_text"
+  ],
+  "title": "SegmentTranslation",
+  "type": "object"
+}

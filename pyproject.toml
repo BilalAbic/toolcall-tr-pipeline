@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "toolcall-tr"
+version = "0.1.0"
+description = "Deterministic, audit-first pipeline for canonical Turkish tool-calling data"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+authors = [{ name = "Toolcall TR contributors" }]
+dependencies = [
+  "jsonschema>=4.25.1,<5",
+  "pydantic>=2.11.9,<3",
+  "rfc8785>=0.1.4,<0.2",
+  "rich>=14.1.0,<15",
+  "typer>=0.19.2,<1",
+]
+
+[project.scripts]
+tcdata = "toolcall_tr.cli:main"
+
+[dependency-groups]
+dev = [
+  "hypothesis>=6.138.15,<7",
+  "pyright>=1.1.405,<2",
+  "pytest>=8.4.2,<9",
+  "pytest-cov>=7.0.0,<8",
+  "ruff>=0.12.11,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/toolcall_tr"]
+
+[tool.hatch.build]
+include = [
+  "src/toolcall_tr/**/*.py",
+  "src/toolcall_tr/data/*.json",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["toolcall_tr"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF", "SIM"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = ["src", "tests"]
+exclude = ["artifacts", ".venv"]
+reportMissingTypeStubs = false

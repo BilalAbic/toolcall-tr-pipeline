@@ -1,0 +1,138 @@
+{
+  "$defs": {
+    "ArtifactDescriptor": {
+      "additionalProperties": false,
+      "properties": {
+        "logical_name": {
+          "minLength": 1,
+          "title": "Logical Name",
+          "type": "string"
+        },
+        "relative_path": {
+          "minLength": 1,
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "row_count": {
+          "minimum": 0,
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "schema_version": {
+          "minLength": 1,
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 0,
+          "title": "Size",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "logical_name",
+        "relative_path",
+        "sha256",
+        "size",
+        "row_count",
+        "schema_version"
+      ],
+      "title": "ArtifactDescriptor",
+      "type": "object"
+    },
+    "RowAccounting": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted": {
+          "minimum": 0,
+          "title": "Accepted",
+          "type": "integer"
+        },
+        "input": {
+          "minimum": 0,
+          "title": "Input",
+          "type": "integer"
+        },
+        "quarantined": {
+          "minimum": 0,
+          "title": "Quarantined",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "input",
+        "accepted",
+        "quarantined"
+      ],
+      "title": "RowAccounting",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifacts": {
+      "items": {
+        "$ref": "#/$defs/ArtifactDescriptor"
+      },
+      "minItems": 1,
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "contract_hashes": {
+      "additionalProperties": {
+        "pattern": "^sha256:[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "title": "Contract Hashes",
+      "type": "object"
+    },
+    "input_manifest_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Input Manifest Ids",
+      "type": "array"
+    },
+    "manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Manifest Id",
+      "type": "string"
+    },
+    "pipeline_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Pipeline Version",
+      "type": "string"
+    },
+    "row_accounting": {
+      "$ref": "#/$defs/RowAccounting"
+    },
+    "schema_version": {
+      "const": "content-manifest-0.1.0",
+      "default": "content-manifest-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stage": {
+      "minLength": 1,
+      "title": "Stage",
+      "type": "string"
+    }
+  },
+  "required": [
+    "manifest_id",
+    "stage",
+    "input_manifest_ids",
+    "artifacts",
+    "row_accounting",
+    "contract_hashes"
+  ],
+  "title": "ContentManifest",
+  "type": "object"
+}

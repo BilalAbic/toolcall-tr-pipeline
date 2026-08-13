@@ -1,0 +1,114 @@
+{
+  "$defs": {
+    "CharacterRange": {
+      "additionalProperties": false,
+      "description": "A half-open Python Unicode code-point range in the rendered text.",
+      "properties": {
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "CharacterRange",
+      "type": "object"
+    },
+    "TokenRange": {
+      "additionalProperties": false,
+      "description": "A half-open token range paired with its exact character range.",
+      "properties": {
+        "character_range": {
+          "$ref": "#/$defs/CharacterRange"
+        },
+        "end_token": {
+          "exclusiveMinimum": 0,
+          "title": "End Token",
+          "type": "integer"
+        },
+        "start_token": {
+          "minimum": 0,
+          "title": "Start Token",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_token",
+        "end_token",
+        "character_range"
+      ],
+      "title": "TokenRange",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Target-only labels for one verified render; ``-100`` means ignore.",
+  "properties": {
+    "ignored_label": {
+      "const": -100,
+      "default": -100,
+      "title": "Ignored Label",
+      "type": "integer"
+    },
+    "input_ids": {
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "minItems": 1,
+      "title": "Input Ids",
+      "type": "array"
+    },
+    "labels": {
+      "items": {
+        "type": "integer"
+      },
+      "minItems": 1,
+      "title": "Labels",
+      "type": "array"
+    },
+    "loss_mask_id": {
+      "pattern": "^lossmask_[0-9a-f]{64}$",
+      "title": "Loss Mask Id",
+      "type": "string"
+    },
+    "render_id": {
+      "pattern": "^render_[0-9a-f]{64}$",
+      "title": "Render Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "loss-mask-0.1.0",
+      "default": "loss-mask-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "target_token_ranges": {
+      "items": {
+        "$ref": "#/$defs/TokenRange"
+      },
+      "maxItems": 1,
+      "minItems": 1,
+      "title": "Target Token Ranges",
+      "type": "array"
+    }
+  },
+  "required": [
+    "loss_mask_id",
+    "render_id",
+    "input_ids",
+    "labels",
+    "target_token_ranges"
+  ],
+  "title": "LossMask",
+  "type": "object"
+}

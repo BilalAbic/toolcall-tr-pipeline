@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The complete, local-only input to a proposed external egress.",
+  "properties": {
+    "endpoint": {
+      "minLength": 1,
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "payload": {
+      "title": "Payload",
+      "type": "string"
+    },
+    "provider": {
+      "minLength": 1,
+      "title": "Provider",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "egress-request-0.1.0",
+      "default": "egress-request-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "provider",
+    "endpoint",
+    "payload"
+  ],
+  "title": "EgressRequest",
+  "type": "object"
+}

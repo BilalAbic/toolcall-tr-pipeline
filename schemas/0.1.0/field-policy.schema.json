@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "ArgumentPathPolicy": {
+      "additionalProperties": false,
+      "description": "An explicit policy for one leaf of a named function's arguments.",
+      "properties": {
+        "action": {
+          "enum": [
+            "copy_exact",
+            "translate",
+            "manual_policy_required"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "argument_pointer": {
+          "pattern": "^/(?:[^/~]|~[01])+(?:/[^/]*)*$",
+          "title": "Argument Pointer",
+          "type": "string"
+        },
+        "tool_name": {
+          "minLength": 1,
+          "title": "Tool Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_name",
+        "argument_pointer",
+        "action"
+      ],
+      "title": "ArgumentPathPolicy",
+      "type": "object"
+    },
+    "FieldAction": {
+      "enum": [
+        "copy_exact",
+        "translate",
+        "translate_if_natural_language",
+        "omit_from_model_input",
+        "manual_policy_required"
+      ],
+      "title": "FieldAction",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Versioned, closed field-policy contract for one extraction pass.\n\n``translate_if_natural_language`` is intentionally not resolved here:\nthis deterministic layer has no semantic classifier, so an encountered\nvalue must be promoted to an explicit ``translate`` or ``copy_exact``\npolicy before it can leave the host.",
+  "properties": {
+    "argument_policies": {
+      "items": {
+        "$ref": "#/$defs/ArgumentPathPolicy"
+      },
+      "title": "Argument Policies",
+      "type": "array"
+    },
+    "assistant_content_action": {
+      "$ref": "#/$defs/FieldAction",
+      "default": "translate"
+    },
+    "developer_content_action": {
+      "$ref": "#/$defs/FieldAction",
+      "default": "copy_exact"
+    },
+    "parameter_description_action": {
+      "$ref": "#/$defs/FieldAction",
+      "default": "translate_if_natural_language"
+    },
+    "policy_version": {
+      "minLength": 1,
+      "title": "Policy Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "field-policy-0.1.0",
+      "default": "field-policy-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "system_content_action": {
+      "$ref": "#/$defs/FieldAction",
+      "default": "copy_exact"
+    },
+    "tool_content_action": {
+      "$ref": "#/$defs/FieldAction",
+      "default": "copy_exact"
+    },
+    "tool_description_action": {
+      "$ref": "#/$defs/FieldAction",
+      "default": "translate_if_natural_language"
+    },
+    "user_content_action": {
+      "$ref": "#/$defs/FieldAction",
+      "default": "translate"
+    }
+  },
+  "required": [
+    "policy_version",
+    "argument_policies"
+  ],
+  "title": "FieldPolicy",
+  "type": "object"
+}

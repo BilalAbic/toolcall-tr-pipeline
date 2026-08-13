@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Content-addressed receipt for an immutable live evaluation output set.",
+  "properties": {
+    "attempts_manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Attempts Manifest Id",
+      "type": "string"
+    },
+    "config_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Config Sha256",
+      "type": "string"
+    },
+    "failed_rows": {
+      "minimum": 0,
+      "title": "Failed Rows",
+      "type": "integer"
+    },
+    "gold_release_allowed": {
+      "const": false,
+      "default": false,
+      "title": "Gold Release Allowed",
+      "type": "boolean"
+    },
+    "input_file_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Input File Sha256",
+      "type": "string"
+    },
+    "input_rows": {
+      "exclusiveMinimum": 0,
+      "title": "Input Rows",
+      "type": "integer"
+    },
+    "report_id": {
+      "pattern": "^liveevalrun_[0-9a-f]{64}$",
+      "title": "Report Id",
+      "type": "string"
+    },
+    "results_manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Results Manifest Id",
+      "type": "string"
+    },
+    "role": {
+      "enum": [
+        "mini_verifier",
+        "strong_judge"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "live-evaluation-run-0.1.0",
+      "default": "live-evaluation-run-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "succeeded_rows": {
+      "minimum": 0,
+      "title": "Succeeded Rows",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "run_id",
+    "report_id",
+    "input_file_sha256",
+    "config_sha256",
+    "role",
+    "input_rows",
+    "succeeded_rows",
+    "failed_rows",
+    "results_manifest_id",
+    "attempts_manifest_id"
+  ],
+  "title": "LiveEvaluationRunReport",
+  "type": "object"
+}

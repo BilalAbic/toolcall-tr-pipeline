@@ -1,0 +1,275 @@
+{
+  "$defs": {
+    "EgressViolation": {
+      "additionalProperties": false,
+      "description": "A finding without the matched sensitive value.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/EgressViolationCategory"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "redactable": {
+          "title": "Redactable",
+          "type": "boolean"
+        },
+        "rule_id": {
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rule_id",
+        "category",
+        "start",
+        "end",
+        "redactable"
+      ],
+      "title": "EgressViolation",
+      "type": "object"
+    },
+    "EgressViolationCategory": {
+      "description": "Classes of content that must not leave the local pipeline.",
+      "enum": [
+        "configuration",
+        "secret",
+        "pii",
+        "local_path",
+        "private_endpoint",
+        "endpoint"
+      ],
+      "title": "EgressViolationCategory",
+      "type": "string"
+    },
+    "LivePreflightDecision": {
+      "additionalProperties": false,
+      "description": "A redaction-safe security decision; it never stores the request payload.",
+      "properties": {
+        "allowed": {
+          "title": "Allowed",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "minLength": 1,
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "payload_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Payload Sha256",
+          "type": "string"
+        },
+        "provider": {
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "live-preflight-0.1.0",
+          "default": "live-preflight-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "violations": {
+          "items": {
+            "$ref": "#/$defs/EgressViolation"
+          },
+          "title": "Violations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "provider",
+        "endpoint",
+        "payload_sha256",
+        "allowed",
+        "violations"
+      ],
+      "title": "LivePreflightDecision",
+      "type": "object"
+    },
+    "ProviderAttemptOutcome": {
+      "description": "Terminal result of one adapter call or a preflight rejection.",
+      "enum": [
+        "preflight_blocked",
+        "succeeded",
+        "failed"
+      ],
+      "title": "ProviderAttemptOutcome",
+      "type": "string"
+    },
+    "ProviderFailureCode": {
+      "description": "Stable, redaction-safe reason codes; remote error text is intentionally absent.",
+      "enum": [
+        "preflight_blocked",
+        "credential_unavailable",
+        "endpoint_rejected",
+        "transport_configuration",
+        "http_transient",
+        "http_permanent",
+        "network_delivery_unknown",
+        "response_too_large",
+        "malformed_response",
+        "provider_response_invalid",
+        "provider_configuration",
+        "provider_gate",
+        "unknown"
+      ],
+      "title": "ProviderFailureCode",
+      "type": "string"
+    },
+    "ProviderOperation": {
+      "description": "The only live provider operations implemented by this project.",
+      "enum": [
+        "translation",
+        "judge"
+      ],
+      "title": "ProviderOperation",
+      "type": "string"
+    },
+    "RetryBudgetClassification": {
+      "additionalProperties": false,
+      "description": "The fixed zero automatic-retry budget prevents accidental duplicate charges.",
+      "properties": {
+        "automatic_retry_budget": {
+          "const": 0,
+          "default": 0,
+          "title": "Automatic Retry Budget",
+          "type": "integer"
+        },
+        "disposition": {
+          "$ref": "#/$defs/RetryDisposition"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "disposition",
+        "reason"
+      ],
+      "title": "RetryBudgetClassification",
+      "type": "object"
+    },
+    "RetryDisposition": {
+      "description": "A classification for an operator; the adapters never retry automatically.",
+      "enum": [
+        "not_applicable",
+        "do_not_retry",
+        "manual_retry_candidate"
+      ],
+      "title": "RetryDisposition",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Content-addressed, safe-to-log evidence for a single provider operation.\n\n``attempt_id`` deliberately identifies the same provider/model/endpoint/body\ncombination deterministically.  A surrounding append-only event stream is\nresponsible for distinguishing repeated operator-initiated executions.",
+  "properties": {
+    "attempt_id": {
+      "pattern": "^pvattempt_[0-9a-f]{64}$",
+      "title": "Attempt Id",
+      "type": "string"
+    },
+    "endpoint": {
+      "minLength": 1,
+      "title": "Endpoint",
+      "type": "string"
+    },
+    "failure_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ProviderFailureCode"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "http_status": {
+      "anyOf": [
+        {
+          "maximum": 599,
+          "minimum": 100,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Http Status"
+    },
+    "model": {
+      "minLength": 1,
+      "title": "Model",
+      "type": "string"
+    },
+    "operation": {
+      "$ref": "#/$defs/ProviderOperation"
+    },
+    "outcome": {
+      "$ref": "#/$defs/ProviderAttemptOutcome"
+    },
+    "preflight": {
+      "$ref": "#/$defs/LivePreflightDecision"
+    },
+    "provider": {
+      "minLength": 1,
+      "title": "Provider",
+      "type": "string"
+    },
+    "request_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Request Sha256",
+      "type": "string"
+    },
+    "response_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Response Sha256"
+    },
+    "retry": {
+      "$ref": "#/$defs/RetryBudgetClassification"
+    },
+    "schema_version": {
+      "const": "provider-attempt-0.1.0",
+      "default": "provider-attempt-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "attempt_id",
+    "operation",
+    "provider",
+    "model",
+    "endpoint",
+    "request_sha256",
+    "preflight",
+    "outcome",
+    "response_sha256",
+    "failure_code",
+    "http_status",
+    "retry"
+  ],
+  "title": "ProviderAttemptRecord",
+  "type": "object"
+}

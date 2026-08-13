@@ -1,0 +1,51 @@
+{
+  "$defs": {
+    "CharacterRange": {
+      "additionalProperties": false,
+      "description": "A half-open Python Unicode code-point range in the rendered text.",
+      "properties": {
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "CharacterRange",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A half-open token range paired with its exact character range.",
+  "properties": {
+    "character_range": {
+      "$ref": "#/$defs/CharacterRange"
+    },
+    "end_token": {
+      "exclusiveMinimum": 0,
+      "title": "End Token",
+      "type": "integer"
+    },
+    "start_token": {
+      "minimum": 0,
+      "title": "Start Token",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "start_token",
+    "end_token",
+    "character_range"
+  ],
+  "title": "TokenRange",
+  "type": "object"
+}

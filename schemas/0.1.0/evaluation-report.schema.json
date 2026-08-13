@@ -1,0 +1,410 @@
+{
+  "$defs": {
+    "CoverageSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "coverage": {
+          "$ref": "#/$defs/WilsonConfidenceInterval"
+        },
+        "requested_units": {
+          "exclusiveMinimum": 0,
+          "title": "Requested Units",
+          "type": "integer"
+        },
+        "uncovered_unit_ids": {
+          "items": {
+            "pattern": "^evalunit_[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Uncovered Unit Ids",
+          "type": "array"
+        },
+        "verdict_units": {
+          "minimum": 0,
+          "title": "Verdict Units",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "requested_units",
+        "verdict_units",
+        "uncovered_unit_ids",
+        "coverage"
+      ],
+      "title": "CoverageSummary",
+      "type": "object"
+    },
+    "EvaluationUnit": {
+      "additionalProperties": false,
+      "description": "One immutable source/target leaf that may be evaluated once per run.",
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "path": {
+          "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "evaluation-unit-0.1.0",
+          "default": "evaluation-unit-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "segment_id": {
+          "pattern": "^seg_[0-9a-f]{64}$",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "source_text_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Source Text Sha256",
+          "type": "string"
+        },
+        "target_text_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Target Text Sha256",
+          "type": "string"
+        },
+        "unit_id": {
+          "pattern": "^evalunit_[0-9a-f]{64}$",
+          "title": "Unit Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit_id",
+        "episode_id",
+        "segment_id",
+        "path",
+        "source_text_sha256",
+        "target_text_sha256"
+      ],
+      "title": "EvaluationUnit",
+      "type": "object"
+    },
+    "FindingCount": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/MqmCategory"
+        },
+        "count": {
+          "exclusiveMinimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "severity": {
+          "$ref": "#/$defs/MqmSeverity"
+        }
+      },
+      "required": [
+        "category",
+        "severity",
+        "count"
+      ],
+      "title": "FindingCount",
+      "type": "object"
+    },
+    "ModelConclusion": {
+      "enum": [
+        "pass",
+        "needs_human_review",
+        "fail"
+      ],
+      "type": "string"
+    },
+    "ModelEvaluationVerdict": {
+      "additionalProperties": false,
+      "description": "Provider-shaped triage record, intentionally unable to express acceptance.",
+      "properties": {
+        "conclusion": {
+          "$ref": "#/$defs/ModelConclusion"
+        },
+        "evaluation_unit": {
+          "$ref": "#/$defs/EvaluationUnit"
+        },
+        "evaluator_label": {
+          "minLength": 1,
+          "title": "Evaluator Label",
+          "type": "string"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/MqmFinding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "model-evaluation-verdict-0.1.0",
+          "default": "model-evaluation-verdict-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "unresolved_reasons": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Unresolved Reasons",
+          "type": "array"
+        },
+        "verdict_id": {
+          "pattern": "^evalverdict_[0-9a-f]{64}$",
+          "title": "Verdict Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict_id",
+        "evaluation_unit",
+        "evaluator_label",
+        "conclusion",
+        "findings",
+        "unresolved_reasons"
+      ],
+      "title": "ModelEvaluationVerdict",
+      "type": "object"
+    },
+    "MqmCategory": {
+      "enum": [
+        "accuracy.mistranslation",
+        "accuracy.omission",
+        "accuracy.addition",
+        "accuracy.untranslated",
+        "terminology",
+        "fluency.grammar",
+        "fluency.spelling",
+        "fluency.punctuation",
+        "locale_convention",
+        "style.register",
+        "tool_semantics",
+        "protected_content",
+        "research_provenance"
+      ],
+      "type": "string"
+    },
+    "MqmFinding": {
+      "additionalProperties": false,
+      "description": "One atomic MQM-style issue; compound findings must be split by callers.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/MqmCategory"
+        },
+        "evidence": {
+          "$ref": "#/$defs/SegmentPathEvidence"
+        },
+        "finding_id": {
+          "pattern": "^mqm_[0-9a-f]{64}$",
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "mqm-finding-0.1.0",
+          "default": "mqm-finding-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/MqmSeverity"
+        }
+      },
+      "required": [
+        "finding_id",
+        "category",
+        "severity",
+        "evidence",
+        "rationale"
+      ],
+      "title": "MqmFinding",
+      "type": "object"
+    },
+    "MqmSeverity": {
+      "enum": [
+        "minor",
+        "major",
+        "critical"
+      ],
+      "type": "string"
+    },
+    "OutcomeSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "fail_count": {
+          "minimum": 0,
+          "title": "Fail Count",
+          "type": "integer"
+        },
+        "needs_human_review_count": {
+          "minimum": 0,
+          "title": "Needs Human Review Count",
+          "type": "integer"
+        },
+        "pass_count": {
+          "minimum": 0,
+          "title": "Pass Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pass_count",
+        "needs_human_review_count",
+        "fail_count"
+      ],
+      "title": "OutcomeSummary",
+      "type": "object"
+    },
+    "SegmentPathEvidence": {
+      "additionalProperties": false,
+      "description": "Localized, bidirectional evidence for exactly one evaluation leaf.",
+      "properties": {
+        "path": {
+          "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+          "title": "Path",
+          "type": "string"
+        },
+        "segment_id": {
+          "pattern": "^seg_[0-9a-f]{64}$",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "source_excerpt": {
+          "minLength": 1,
+          "title": "Source Excerpt",
+          "type": "string"
+        },
+        "target_excerpt": {
+          "minLength": 1,
+          "title": "Target Excerpt",
+          "type": "string"
+        }
+      },
+      "required": [
+        "segment_id",
+        "path",
+        "source_excerpt",
+        "target_excerpt"
+      ],
+      "title": "SegmentPathEvidence",
+      "type": "object"
+    },
+    "WilsonConfidenceInterval": {
+      "additionalProperties": false,
+      "description": "A standard-library Wilson 95% confidence interval for a binomial rate.",
+      "properties": {
+        "estimate": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Estimate",
+          "type": "number"
+        },
+        "lower": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Lower",
+          "type": "number"
+        },
+        "method": {
+          "const": "wilson-95",
+          "default": "wilson-95",
+          "title": "Method",
+          "type": "string"
+        },
+        "successes": {
+          "minimum": 0,
+          "title": "Successes",
+          "type": "integer"
+        },
+        "trials": {
+          "exclusiveMinimum": 0,
+          "title": "Trials",
+          "type": "integer"
+        },
+        "upper": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Upper",
+          "type": "number"
+        }
+      },
+      "required": [
+        "successes",
+        "trials",
+        "estimate",
+        "lower",
+        "upper"
+      ],
+      "title": "WilsonConfidenceInterval",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Deterministic report over a declared leaf-level evaluation sample.",
+  "properties": {
+    "coverage": {
+      "$ref": "#/$defs/CoverageSummary"
+    },
+    "finding_counts": {
+      "items": {
+        "$ref": "#/$defs/FindingCount"
+      },
+      "title": "Finding Counts",
+      "type": "array"
+    },
+    "gold_release_allowed": {
+      "const": false,
+      "default": false,
+      "title": "Gold Release Allowed",
+      "type": "boolean"
+    },
+    "model_verdicts": {
+      "items": {
+        "$ref": "#/$defs/ModelEvaluationVerdict"
+      },
+      "title": "Model Verdicts",
+      "type": "array"
+    },
+    "outcomes": {
+      "$ref": "#/$defs/OutcomeSummary"
+    },
+    "report_id": {
+      "pattern": "^evalreport_[0-9a-f]{64}$",
+      "title": "Report Id",
+      "type": "string"
+    },
+    "requested_units": {
+      "items": {
+        "$ref": "#/$defs/EvaluationUnit"
+      },
+      "minItems": 1,
+      "title": "Requested Units",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "evaluation-report-0.1.0",
+      "default": "evaluation-report-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "report_id",
+    "requested_units",
+    "model_verdicts",
+    "coverage",
+    "outcomes",
+    "finding_counts"
+  ],
+  "title": "EvaluationReport",
+  "type": "object"
+}

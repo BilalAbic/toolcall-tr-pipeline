@@ -1,0 +1,133 @@
+{
+  "$defs": {
+    "ProtectedToken": {
+      "additionalProperties": false,
+      "description": "One occurrence-specific sentinel already substituted into a source segment.",
+      "properties": {
+        "occurrence": {
+          "exclusiveMinimum": 0,
+          "title": "Occurrence",
+          "type": "integer"
+        },
+        "token": {
+          "pattern": "^⟪S[1-9][0-9]*_P[1-9][0-9]*⟫$",
+          "title": "Token",
+          "type": "string"
+        }
+      },
+      "required": [
+        "token",
+        "occurrence"
+      ],
+      "title": "ProtectedToken",
+      "type": "object"
+    },
+    "TranslationSegment": {
+      "additionalProperties": false,
+      "description": "A single leaf that may be translated without reconstructing source JSON.",
+      "properties": {
+        "path": {
+          "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+          "title": "Path",
+          "type": "string"
+        },
+        "protected_tokens": {
+          "items": {
+            "$ref": "#/$defs/ProtectedToken"
+          },
+          "title": "Protected Tokens",
+          "type": "array"
+        },
+        "segment_id": {
+          "pattern": "^seg_[0-9a-f]{64}$",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "source_text": {
+          "minLength": 1,
+          "title": "Source Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "segment_id",
+        "path",
+        "source_text",
+        "protected_tokens"
+      ],
+      "title": "TranslationSegment",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Immutable request body for a provider adapter that is not implemented here.",
+  "properties": {
+    "episode_id": {
+      "pattern": "^ep_[0-9a-f]{64}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "field_policy_version": {
+      "minLength": 1,
+      "title": "Field Policy Version",
+      "type": "string"
+    },
+    "input_variant_id": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Input Variant Id",
+      "type": "string"
+    },
+    "request_id": {
+      "pattern": "^trq_[0-9a-f]{64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "translation-request-0.1.0",
+      "default": "translation-request-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/TranslationSegment"
+      },
+      "minItems": 1,
+      "title": "Segments",
+      "type": "array"
+    },
+    "source_language": {
+      "const": "en",
+      "default": "en",
+      "title": "Source Language",
+      "type": "string"
+    },
+    "target_language": {
+      "const": "tr",
+      "default": "tr",
+      "title": "Target Language",
+      "type": "string"
+    },
+    "terminology_evidence": {
+      "items": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "title": "Terminology Evidence",
+      "type": "array"
+    }
+  },
+  "required": [
+    "request_id",
+    "episode_id",
+    "input_variant_id",
+    "field_policy_version",
+    "segments",
+    "terminology_evidence"
+  ],
+  "title": "TranslationRequest",
+  "type": "object"
+}

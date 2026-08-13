@@ -1,0 +1,53 @@
+{
+  "$defs": {
+    "EgressViolationCategory": {
+      "description": "Classes of content that must not leave the local pipeline.",
+      "enum": [
+        "configuration",
+        "secret",
+        "pii",
+        "local_path",
+        "private_endpoint",
+        "endpoint"
+      ],
+      "title": "EgressViolationCategory",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A finding without the matched sensitive value.",
+  "properties": {
+    "category": {
+      "$ref": "#/$defs/EgressViolationCategory"
+    },
+    "end": {
+      "exclusiveMinimum": 0,
+      "title": "End",
+      "type": "integer"
+    },
+    "redactable": {
+      "title": "Redactable",
+      "type": "boolean"
+    },
+    "rule_id": {
+      "minLength": 1,
+      "title": "Rule Id",
+      "type": "string"
+    },
+    "start": {
+      "minimum": 0,
+      "title": "Start",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "rule_id",
+    "category",
+    "start",
+    "end",
+    "redactable"
+  ],
+  "title": "EgressViolation",
+  "type": "object"
+}
