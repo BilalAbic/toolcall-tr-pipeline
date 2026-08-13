@@ -13,6 +13,7 @@ sources/
 
 # Runtime outputs are immutable local artifacts, never source-controlled data.
 artifacts/
+exports/
 events/
 indexes/
 manifests/

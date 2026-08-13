@@ -20,6 +20,7 @@ from toolcall_tr.autonomous_pipeline import (
     prepare_strong_escalation_inputs,
     read_automation_results,
     run_automation_translation,
+    select_automation_candidates,
 )
 from toolcall_tr.config import PipelineConfig, ProviderConfig, ProviderRole
 from toolcall_tr.field_policy import load_field_policy
@@ -243,6 +244,38 @@ def _prepare_candidates(tmp_path: Path) -> tuple[Path, list[CanonicalEpisode]]:
     )
     candidate_path = next((candidate_root / "canonical").glob("*.jsonl"))
     return candidate_path, episodes
+
+
+def test_candidate_offset_selects_a_disjoint_next_batch(fixture_root: Path) -> None:
+    base = canonical_fixture(fixture_root / "no_tool", "no_tool", 2)
+    episodes = [
+        _episode(base, "1", "source-a"),
+        _episode(base, "2", "source-b"),
+        _episode(base, "3", "source-a"),
+        _episode(base, "4", "source-b"),
+    ]
+    audit = audit_exact_conflicts(episodes)
+    policy = load_field_policy(ROOT / "configs" / "field_policy.toml")
+
+    first_members, _ = select_automation_candidates(
+        episodes,
+        [audit],
+        field_policy=policy,
+        requested_episode_count=2,
+        max_translatable_segments=4,
+    )
+    second_members, _ = select_automation_candidates(
+        episodes,
+        [audit],
+        field_policy=policy,
+        requested_episode_count=2,
+        max_translatable_segments=4,
+        candidate_offset=2,
+    )
+
+    assert {member.episode_id for member in first_members}.isdisjoint(
+        member.episode_id for member in second_members
+    )
 
 
 def test_automation_refuses_candidate_prompt_before_transport(tmp_path: Path) -> None:

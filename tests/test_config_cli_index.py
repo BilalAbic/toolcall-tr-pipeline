@@ -48,9 +48,25 @@ def test_cli_smoke_and_translation_requires_explicit_live_inputs() -> None:
     assert translate_help.exit_code == 0
     assert "--live" in translate_help.stdout
     assert "--field-policy" in translate_help.stdout
+    automation_plan_help = runner.invoke(app, ["automation", "plan", "--help"])
+    assert automation_plan_help.exit_code == 0
+    assert "without provider egress" in automation_plan_help.stdout
+    assert "--candidate-offset" in automation_plan_help.stdout
     index_blocked = runner.invoke(app, ["index", "rebuild"])
     assert index_blocked.exit_code == 2
     assert "intentionally unavailable" in index_blocked.stdout
+
+
+def test_automation_status_is_read_only_and_available_before_a_run(tmp_path: Path) -> None:
+    output = tmp_path / "automation-output"
+    output.mkdir()
+
+    result = CliRunner().invoke(app, ["automation", "status", str(output)])
+
+    assert result.exit_code == 0
+    assert "Automation status" in result.stdout
+    assert "not started" in result.stdout
+    assert "$0.000000" in result.stdout
 
 
 def test_membership_index_is_rebuildable_and_deterministic(fixture_root: Path) -> None:

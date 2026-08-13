@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, ValidationError, model_validator
 
 from toolcall_tr.artifacts import ContentManifest, publish_bytes_atomic, publish_jsonl_artifact
 from toolcall_tr.config import PipelineConfig
@@ -33,6 +33,7 @@ from toolcall_tr.provider_provenance import (
 LiveEvaluationInputId = Annotated[str, Field(pattern=r"^liveevalinput_[0-9a-f]{64}$")]
 LiveEvaluationResultId = Annotated[str, Field(pattern=r"^liveevalresult_[0-9a-f]{64}$")]
 LiveEvaluationRunId = Annotated[str, Field(pattern=r"^liveevalrun_[0-9a-f]{64}$")]
+LiveEvaluationCheckpointId = Annotated[str, Field(pattern=r"^liveevalcheckpoint_[0-9a-f]{64}$")]
 LiveJudgeRole = Literal["mini_verifier", "strong_judge"]
 
 
@@ -105,6 +106,28 @@ class LiveEvaluationResult(StrictModel):
         body = self.model_dump(mode="json", exclude={"result_id"})
         if self.result_id != stable_id("liveevalresult", body):
             raise ValueError("live evaluation result ID does not match its content")
+        return self
+
+
+class LiveEvaluationCheckpoint(StrictModel):
+    """One resumable, content-addressed terminal judge outcome for an input row."""
+
+    schema_version: Literal["live-evaluation-checkpoint-0.1.0"] = (
+        "live-evaluation-checkpoint-0.1.0"
+    )
+    checkpoint_id: LiveEvaluationCheckpointId
+    input_id: LiveEvaluationInputId
+    role: LiveJudgeRole
+    config_sha256: Sha256
+    result: LiveEvaluationResult
+
+    @model_validator(mode="after")
+    def validate_checkpoint(self) -> LiveEvaluationCheckpoint:
+        if self.result.input_id != self.input_id:
+            raise ValueError("evaluation checkpoint input ID must match its result")
+        body = self.model_dump(mode="json", exclude={"checkpoint_id"})
+        if self.checkpoint_id != stable_id("liveevalcheckpoint", body):
+            raise ValueError("evaluation checkpoint ID does not match its content")
         return self
 
 
@@ -261,6 +284,64 @@ def _build_result(
     )
 
 
+def _checkpoint_path(root: Path, input_id: str) -> Path:
+    return root / "checkpoints" / f"{input_id}.json"
+
+
+def _read_checkpoint(
+    path: Path,
+    *,
+    item: LiveEvaluationInput,
+    role: LiveJudgeRole,
+    config_sha256: Sha256,
+) -> LiveEvaluationResult | None:
+    if not path.exists():
+        return None
+    try:
+        checkpoint = LiveEvaluationCheckpoint.model_validate_json(
+            path.read_text(encoding="utf-8"), strict=True
+        )
+    except (OSError, ValidationError, ValueError) as exc:
+        raise LiveEvaluationRuntimeError("evaluation checkpoint is invalid") from exc
+    if (
+        checkpoint.input_id != item.input_id
+        or checkpoint.role != role
+        or checkpoint.config_sha256 != config_sha256
+        or checkpoint.result.evaluation_unit != item.evaluation_unit
+    ):
+        raise LiveEvaluationRuntimeError(
+            "evaluation checkpoint conflicts with current input or config"
+        )
+    return checkpoint.result
+
+
+def _write_checkpoint(
+    root: Path,
+    *,
+    item: LiveEvaluationInput,
+    role: LiveJudgeRole,
+    config_sha256: Sha256,
+    result: LiveEvaluationResult,
+) -> None:
+    body = {
+        "schema_version": "live-evaluation-checkpoint-0.1.0",
+        "input_id": item.input_id,
+        "role": role,
+        "config_sha256": config_sha256,
+        "result": result.model_dump(mode="json"),
+    }
+    checkpoint = LiveEvaluationCheckpoint(
+        checkpoint_id=stable_id("liveevalcheckpoint", body),
+        input_id=item.input_id,
+        role=role,
+        config_sha256=config_sha256,
+        result=result,
+    )
+    publish_bytes_atomic(
+        _checkpoint_path(root, item.input_id), canonical_bytes(checkpoint) + b"\n"
+    )
+
+
 def _validate_results_artifact(path: Path) -> None:
     records = [
         LiveEvaluationResult.model_validate_json(canonical_bytes(record), strict=True)
@@ -310,10 +391,19 @@ def run_live_evaluation(
     input_bytes = input_path.read_bytes()
     input_sha256 = sha256_bytes(input_bytes)
     inputs = _read_inputs(input_path)
+    config_sha256 = sha256_bytes(canonical_bytes(config.model_dump(mode="json")))
 
     def evaluate_item(
-        item: LiveEvaluationInput,
+    item: LiveEvaluationInput,
     ) -> tuple[LiveEvaluationResult, ProviderAttemptRecord]:
+        existing = _read_checkpoint(
+            _checkpoint_path(resolved_output, item.input_id),
+            item=item,
+            role=role,
+            config_sha256=config_sha256,
+        )
+        if existing is not None:
+            return existing, existing.attempt
         row_attempts: list[ProviderAttemptRecord] = []
         judge = judge_factory(row_attempts.append)
         verdict: ModelEvaluationVerdict | None = None
@@ -331,7 +421,15 @@ def run_live_evaluation(
                 "live judge did not emit exactly one terminal attempt record"
             )
         attempt = row_attempts[0]
-        return _build_result(item=item, attempt=attempt, verdict=verdict), attempt
+        result = _build_result(item=item, attempt=attempt, verdict=verdict)
+        _write_checkpoint(
+            resolved_output,
+            item=item,
+            role=role,
+            config_sha256=config_sha256,
+            result=result,
+        )
+        return result, attempt
 
     if max_workers == 1:
         evaluated = [evaluate_item(item) for item in inputs]
@@ -352,7 +450,6 @@ def run_live_evaluation(
 
     ordered_results = sorted(results, key=lambda item: item.result_id)
     ordered_attempts = sorted(attempts, key=lambda item: item.attempt_id)
-    config_sha256 = sha256_bytes(canonical_bytes(config.model_dump(mode="json")))
     attempts_manifest = publish_jsonl_artifact(
         resolved_output / "attempts",
         logical_name="provider-attempts",

@@ -205,6 +205,42 @@ def test_live_evaluation_records_terminal_failures_and_continues_other_rows(tmp_
     assert any(row["failure_code"] == "http_transient" for row in attempts)  # type: ignore[index]
 
 
+def test_live_evaluation_reuses_completed_checkpoints_after_a_restart(tmp_path: Path) -> None:
+    first = _input("8", source="First source leaf.", target="İlk hedef yaprak.")
+    second = _input("9", source="Second source leaf.", target="İkinci hedef yaprak.")
+    output = tmp_path / "output"
+    first_input = _write_input(tmp_path, [first])
+    first_transport = QueueTransport([_pass_envelope()])
+
+    run_live_evaluation(
+        first_input,
+        output,
+        config=_openai_config(),
+        role_name="mini_verifier",
+        run_id="checkpoint-first",
+        judge_factory=_factory(_openai_config(), first_transport),
+    )
+
+    resumed_root = tmp_path / "resumed-input"
+    resumed_root.mkdir()
+    resumed_input = resumed_root / "resumed.jsonl"
+    write_jsonl(resumed_input, [first.model_dump(mode="json"), second.model_dump(mode="json")])
+    resumed_transport = QueueTransport([_pass_envelope()])
+    resumed = run_live_evaluation(
+        resumed_input,
+        output,
+        config=_openai_config(),
+        role_name="mini_verifier",
+        run_id="checkpoint-resumed",
+        judge_factory=_factory(_openai_config(), resumed_transport),
+    )
+
+    assert len(first_transport.calls) == 1
+    assert len(resumed_transport.calls) == 1
+    assert resumed.report.succeeded_rows == 2
+    assert len(list((output / "checkpoints").glob("*.json"))) == 2
+
+
 def test_live_evaluation_preflight_block_is_published_without_delivery_or_sensitive_text(
     tmp_path: Path,
 ) -> None:

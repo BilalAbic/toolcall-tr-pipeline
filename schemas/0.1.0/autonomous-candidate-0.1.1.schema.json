@@ -1,0 +1,162 @@
+{
+  "$defs": {
+    "AutomationCandidateMember": {
+      "additionalProperties": false,
+      "description": "One deterministic, non-promoting source episode selected for automation.",
+      "properties": {
+        "dataset_namespace": {
+          "title": "Dataset Namespace",
+          "type": "string"
+        },
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "input_variant_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Input Variant Id",
+          "type": "string"
+        },
+        "rank": {
+          "exclusiveMinimum": 0,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "rank_key": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Rank Key",
+          "type": "string"
+        },
+        "translatable_segments": {
+          "exclusiveMinimum": 0,
+          "title": "Translatable Segments",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rank",
+        "episode_id",
+        "input_variant_id",
+        "dataset_namespace",
+        "rank_key",
+        "translatable_segments"
+      ],
+      "title": "AutomationCandidateMember",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A bounded and stratified review-candidate cohort, never Gold membership.",
+  "properties": {
+    "audit_ids": {
+      "items": {
+        "pattern": "^audit_[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Audit Ids",
+      "type": "array"
+    },
+    "candidate_id": {
+      "pattern": "^autocand_[0-9a-f]{64}$",
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "candidate_offset": {
+      "minimum": 0,
+      "title": "Candidate Offset",
+      "type": "integer"
+    },
+    "canonical_manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Canonical Manifest Id",
+      "type": "string"
+    },
+    "field_policy_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Field Policy Sha256",
+      "type": "string"
+    },
+    "human_review": {
+      "const": "required_before_publish",
+      "default": "required_before_publish",
+      "title": "Human Review",
+      "type": "string"
+    },
+    "input_file_sha256s": {
+      "items": {
+        "pattern": "^sha256:[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Input File Sha256S",
+      "type": "array"
+    },
+    "max_translatable_segments": {
+      "minimum": 1,
+      "title": "Max Translatable Segments",
+      "type": "integer"
+    },
+    "members": {
+      "items": {
+        "$ref": "#/$defs/AutomationCandidateMember"
+      },
+      "maxItems": 1000,
+      "minItems": 1,
+      "title": "Members",
+      "type": "array"
+    },
+    "promotion": {
+      "const": "not_eligible",
+      "default": "not_eligible",
+      "title": "Promotion",
+      "type": "string"
+    },
+    "requested_episode_count": {
+      "maximum": 1000,
+      "minimum": 1,
+      "title": "Requested Episode Count",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "autonomous-candidate-0.1.1",
+      "default": "autonomous-candidate-0.1.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_row_cap": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Row Cap"
+    },
+    "total_translatable_segments": {
+      "exclusiveMinimum": 0,
+      "title": "Total Translatable Segments",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "candidate_id",
+    "input_file_sha256s",
+    "audit_ids",
+    "field_policy_sha256",
+    "requested_episode_count",
+    "candidate_offset",
+    "max_translatable_segments",
+    "source_row_cap",
+    "members",
+    "total_translatable_segments",
+    "canonical_manifest_id"
+  ],
+  "title": "AutomationCandidateManifest",
+  "type": "object"
+}

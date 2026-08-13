@@ -54,7 +54,7 @@ from toolcall_tr.provider_provenance import ProviderAttemptRecord, ProviderFailu
 from toolcall_tr.provider_usage import ProviderUsageSinkError
 from toolcall_tr.secure_transport import SecureTransportError
 
-AUTOMATION_POLICY_VERSION = "autonomous-candidate-0.1.0"
+AUTOMATION_POLICY_VERSION = "autonomous-candidate-0.1.1"
 AutomationCandidateId = Annotated[str, Field(pattern=r"^autocand_[0-9a-f]{64}$")]
 AutomationRouteId = Annotated[str, Field(pattern=r"^autoroute_[0-9a-f]{64}$")]
 AutomationResultId = Annotated[str, Field(pattern=r"^autotr_[0-9a-f]{64}$")]
@@ -79,12 +79,13 @@ class AutomationCandidateMember(StrictModel):
 class AutomationCandidateManifest(StrictModel):
     """A bounded and stratified review-candidate cohort, never Gold membership."""
 
-    schema_version: Literal["autonomous-candidate-0.1.0"] = AUTOMATION_POLICY_VERSION
+    schema_version: Literal["autonomous-candidate-0.1.1"] = AUTOMATION_POLICY_VERSION
     candidate_id: AutomationCandidateId
     input_file_sha256s: Annotated[list[Sha256], Field(min_length=1)]
     audit_ids: Annotated[list[AuditId], Field(min_length=1)]
     field_policy_sha256: Sha256
     requested_episode_count: Annotated[int, Field(ge=1, le=1_000)]
+    candidate_offset: Annotated[int, Field(ge=0)]
     max_translatable_segments: Annotated[int, Field(ge=1)]
     source_row_cap: Annotated[int, Field(ge=1)] | None
     members: Annotated[list[AutomationCandidateMember], Field(min_length=1, max_length=1_000)]
@@ -473,12 +474,15 @@ def select_automation_candidates(
     field_policy: FieldPolicy,
     requested_episode_count: int,
     max_translatable_segments: int,
+    candidate_offset: int = 0,
 ) -> tuple[list[AutomationCandidateMember], list[CanonicalEpisode]]:
     """Choose a deterministic, source-stratified cohort without deleting records."""
     if not 1 <= requested_episode_count <= 1_000:
         raise AutonomousPipelineError("candidate size must be between 1 and 1000")
     if max_translatable_segments < 1:
         raise AutonomousPipelineError("candidate segment budget must be positive")
+    if candidate_offset < 0:
+        raise AutonomousPipelineError("candidate offset must not be negative")
     episode_by_id: dict[str, CanonicalEpisode] = {}
     for episode in episodes:
         if episode.episode_id in episode_by_id:
@@ -500,6 +504,7 @@ def select_automation_candidates(
             sorted(values, key=lambda item: (_candidate_rank_key(item), item.episode_id))
         )
     selected: list[tuple[CanonicalEpisode, int]] = []
+    skipped_candidates = 0
     segment_total = 0
     namespaces = sorted(strata)
     # Round-robin retains source diversity.  A row that cannot fit the current
@@ -512,8 +517,18 @@ def select_automation_candidates(
             while queue:
                 episode = queue.popleft()
                 segment_count = len(extract_leaf_segments(episode, field_policy).segments)
-                if not segment_count or segment_total + segment_count > max_translatable_segments:
+                if not segment_count:
                     continue
+                if skipped_candidates < candidate_offset:
+                    skipped_candidates += 1
+                    made_progress = True
+                    # Preserve one-candidate-per-stratum round-robin order while
+                    # consuming the offset stream for a disjoint later batch.
+                    break
+                if segment_total + segment_count > max_translatable_segments:
+                    raise AutonomousPipelineError(
+                        "candidate offset window exceeds the requested segment budget"
+                    )
                 selected.append((episode, segment_count))
                 segment_total += segment_count
                 made_progress = True
@@ -528,8 +543,7 @@ def select_automation_candidates(
             break
     if len(selected) != requested_episode_count:
         raise AutonomousPipelineError(
-            "insufficient conflict-free, policy-covered episodes within the "
-            "candidate segment budget"
+            "insufficient conflict-free, policy-covered episodes after the candidate offset"
         )
     members = [
         AutomationCandidateMember(
@@ -561,6 +575,7 @@ def prepare_automation_candidates(
     requested_episode_count: int,
     max_translatable_segments: int,
     source_row_cap: int | None = None,
+    candidate_offset: int = 0,
 ) -> AutomationCandidateManifest:
     """Publish a bounded candidate canonical JSONL in a root disjoint from inputs."""
     canonical_paths = [path.resolve(strict=True) for path in canonical_jsonl_paths]
@@ -575,6 +590,8 @@ def prepare_automation_candidates(
         raise AutonomousPipelineError("candidate audit inputs must be existing JSON files")
     if source_row_cap is not None and source_row_cap < 1:
         raise AutonomousPipelineError("candidate source row cap must be positive when specified")
+    if candidate_offset < 0:
+        raise AutonomousPipelineError("candidate offset must not be negative")
     root = output_root.resolve(strict=False)
     if output_root.exists() and not output_root.is_dir():
         raise AutonomousPipelineError("candidate output root must be a directory")
@@ -596,6 +613,7 @@ def prepare_automation_candidates(
         field_policy=field_policy,
         requested_episode_count=requested_episode_count,
         max_translatable_segments=max_translatable_segments,
+        candidate_offset=candidate_offset,
     )
     if any(sha256_bytes(path.read_bytes()) != digest for path, digest in input_hashes.items()):
         raise AutonomousPipelineError("canonical input changed during candidate preparation")
@@ -618,6 +636,7 @@ def prepare_automation_candidates(
         "audit_ids": sorted(audit.audit_id for audit in audits),
         "field_policy_sha256": sha256_jcs(field_policy),
         "requested_episode_count": requested_episode_count,
+        "candidate_offset": candidate_offset,
         "max_translatable_segments": max_translatable_segments,
         "source_row_cap": source_row_cap,
         "members": [member.model_dump(mode="json") for member in members],
@@ -632,6 +651,7 @@ def prepare_automation_candidates(
         audit_ids=sorted(audit.audit_id for audit in audits),
         field_policy_sha256=sha256_jcs(field_policy),
         requested_episode_count=requested_episode_count,
+        candidate_offset=candidate_offset,
         max_translatable_segments=max_translatable_segments,
         source_row_cap=source_row_cap,
         members=members,

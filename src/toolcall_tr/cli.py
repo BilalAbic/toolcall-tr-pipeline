@@ -217,6 +217,30 @@ def _print_live_cost(
                 )
 
 
+def _status_object(path: Path) -> Mapping[str, JsonValue]:
+    """Read one immutable status receipt without accepting a loose JSON shape."""
+    value = loads_strict_bytes(path.read_bytes())
+    if not isinstance(value, dict):
+        raise ValueError(f"automation status receipt must be an object: {path}")
+    return value
+
+
+def _status_single(root: Path, pattern: str) -> Mapping[str, JsonValue] | None:
+    paths = sorted(root.glob(pattern))
+    if not paths:
+        return None
+    if len(paths) != 1:
+        raise ValueError(f"automation status is ambiguous for {pattern}; use a new output root")
+    return _status_object(paths[0])
+
+
+def _status_int(receipt: Mapping[str, JsonValue], field: str) -> int:
+    value = receipt.get(field)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValueError(f"automation status receipt has invalid {field}")
+    return value
+
+
 _DEFAULT_PIPELINE_CONFIG = Path("configs/pipeline.toml")
 _LOCAL_ENV_FILE = Path(".env")
 
@@ -907,7 +931,7 @@ def automation_run(
             min=1,
             help="Hard cap on provider-visible natural-language leaves for this run.",
         ),
-    ] = 10_000,
+    ] = 14_000,
     source_row_cap: Annotated[
         int | None,
         typer.Option(
@@ -919,6 +943,17 @@ def automation_run(
             ),
         ),
     ] = None,
+    candidate_offset: Annotated[
+        int,
+        typer.Option(
+            "--candidate-offset",
+            min=0,
+            help=(
+                "Skip this many prior policy-covered candidates in the deterministic "
+                "source-stratified queue; use a different offset for a disjoint next batch."
+            ),
+        ),
+    ] = 0,
     workers: Annotated[
         int | None,
         typer.Option(
@@ -1011,6 +1046,7 @@ def automation_run(
             requested_episode_count=episodes,
             max_translatable_segments=max_segments,
             source_row_cap=source_row_cap,
+            candidate_offset=candidate_offset,
         )
         candidate_jsonl = _manifest_jsonl(
             candidate_root / "canonical", candidate.canonical_manifest_id
@@ -1018,8 +1054,9 @@ def automation_run(
         policy = load_field_policy(field_policy)
         prompt_bundle = load_prompt_bundle(prompt)
         console.print(
-            f"[bold cyan][2/5] Translating {len(candidate.members)} episodes "
-            f"with {translator.model} (workers={translation_workers})[/bold cyan]"
+            f"[bold cyan][2/5] Translating {len(candidate.members)} episodes / "
+            f"{candidate.total_translatable_segments} leaves with {translator.model} "
+            f"(workers={translation_workers})[/bold cyan]"
         )
         translation = run_automation_translation(
             candidate_jsonl,
@@ -1197,6 +1234,200 @@ def automation_run(
         f"hf_review_rows={package.review_ready_records} status={package.status} "
         f"package={output / 'hf-review-package' / package.package_id}"
     )
+
+
+@automation_app.command("plan")
+def automation_plan(
+    canonical_jsonl: Annotated[list[Path], typer.Argument(exists=True, dir_okay=False)],
+    output: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--output",
+            help="Required disjoint root that will hold the immutable candidate manifest.",
+        ),
+    ],
+    conflict_audit_json: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--conflict-audit",
+            exists=True,
+            dir_okay=False,
+            help="Repeatable exact-conflict-audit JSON input.",
+        ),
+    ] = None,
+    field_policy: Annotated[
+        Path,
+        typer.Option("--field-policy", exists=True, dir_okay=False),
+    ] = Path("configs/field_policy.toml"),
+    episodes: Annotated[
+        int,
+        typer.Option("--episodes", min=1, max=1_000, help="Bounded number of canonical episodes."),
+    ] = 1_000,
+    max_segments: Annotated[
+        int,
+        typer.Option(
+            "--max-segments",
+            min=1,
+            help="Hard cap on provider-visible natural-language leaves for this planned run.",
+        ),
+    ] = 14_000,
+    source_row_cap: Annotated[
+        int | None,
+        typer.Option("--source-row-cap", min=1, help="Optional deterministic per-input window."),
+    ] = None,
+    candidate_offset: Annotated[
+        int,
+        typer.Option("--candidate-offset", min=0, help="Offset for a disjoint next batch."),
+    ] = 0,
+) -> None:
+    """Create and show the deterministic candidate plan without provider egress.
+
+    Use the same output root with ``automation run --live`` after checking the
+    exact candidate/leaf count. The plan writes only content-addressed local
+    candidate artifacts and is idempotent for identical inputs.
+    """
+    if not conflict_audit_json:
+        console.print(
+            "[yellow]automation plan requires at least one --conflict-audit; "
+            "no artifact was written.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    try:
+        candidate = prepare_automation_candidates(
+            canonical_jsonl,
+            conflict_audit_json,
+            output / "candidate",
+            field_policy=load_field_policy(field_policy),
+            requested_episode_count=episodes,
+            max_translatable_segments=max_segments,
+            source_row_cap=source_row_cap,
+            candidate_offset=candidate_offset,
+        )
+    except (AutonomousPipelineError, OSError, StrictJsonError, ValidationError, ValueError) as exc:
+        console.print(f"[red]automation plan refused:[/red] {type(exc).__name__}")
+        raise typer.Exit(code=2) from exc
+    console.print(
+        "[green]automation plan ready[/green] "
+        f"candidate_id={candidate.candidate_id} episodes={len(candidate.members)} "
+        f"leaves={candidate.total_translatable_segments} "
+        f"offset={candidate.candidate_offset} output={output}"
+    )
+    console.print(
+        "No provider request was made. Reuse this exact output root with "
+        "[bold]tcdata automation run ... --live[/bold] to start the run."
+    )
+
+
+@automation_app.command("status")
+def automation_status(
+    output: Annotated[
+        Path,
+        typer.Argument(exists=True, file_okay=False, resolve_path=True),
+    ],
+    config: Annotated[
+        Path | None,
+        typer.Option(
+            "--config",
+            exists=True,
+            dir_okay=False,
+            help="Optional config used only to display configured per-model token caps.",
+        ),
+    ] = None,
+) -> None:
+    """Show safe on-disk progress and cumulative cost for one automation output root.
+
+    This command never reads credentials or calls a provider. It is intended for
+    polling a background run and for deciding whether a stopped run can be
+    restarted with the same output root.
+    """
+    try:
+        root = output.resolve(strict=True)
+        candidate = _status_single(root, "candidate/candidates/*.json")
+        translation = _status_single(root, "translation/batches/*.json")
+        mini = _status_single(root, "mini-judge/runs/*.json")
+        strong = _status_single(root, "strong-judge/runs/*.json")
+        consensus = _status_single(root, "consensus/reports/*.json")
+        package = _status_single(root, "hf-review-package/hfpackage_*/manifest.json")
+        candidate_count: int | None = None
+        if candidate is not None:
+            candidate_members = candidate.get("members")
+            if not isinstance(candidate_members, list):
+                raise ValueError("automation candidate receipt has invalid members")
+            candidate_count = len(candidate_members)
+        table = Table(title=f"Automation status — {root.name}", show_header=True)
+        table.add_column("Stage", style="bold cyan")
+        table.add_column("State")
+        table.add_column("Progress", justify="right")
+        table.add_row(
+            "Candidate",
+            "ready" if candidate is not None else "not started",
+            (
+                f"{candidate_count:,} episodes / "
+                f"{_status_int(candidate, 'total_translatable_segments'):,} leaves"
+                if candidate is not None and candidate_count is not None
+                else "—"
+            ),
+        )
+        primary_receipts = list((root / "translation" / "route-receipts").glob("*-primary.json"))
+        fallback_receipts = list((root / "translation" / "route-receipts").glob("*-fallback.json"))
+        translation_progress = (
+            f"{len(primary_receipts):,}/{candidate_count:,} primary; "
+            f"{len(fallback_receipts):,} fallback"
+            if candidate_count is not None
+            else f"{len(primary_receipts):,} primary; {len(fallback_receipts):,} fallback"
+        )
+        table.add_row(
+            "Translation",
+            "complete" if translation is not None else "in progress / resumable",
+            (
+                f"{_status_int(translation, 'translated_records'):,} translated / "
+                f"{_status_int(translation, 'needs_review_records'):,} review"
+                if translation is not None
+                else translation_progress
+            ),
+        )
+        for label, receipt, checkpoint_dir in (
+            ("Mini judge", mini, root / "mini-judge" / "checkpoints"),
+            ("Strong judge", strong, root / "strong-judge" / "checkpoints"),
+        ):
+            checkpoints = len(list(checkpoint_dir.glob("*.json")))
+            table.add_row(
+                label,
+                "complete" if receipt is not None else "in progress / resumable",
+                (
+                    f"{_status_int(receipt, 'succeeded_rows'):,} succeeded / "
+                    f"{_status_int(receipt, 'failed_rows'):,} unavailable"
+                    if receipt is not None
+                    else f"{checkpoints:,} checkpointed rows"
+                ),
+            )
+        table.add_row(
+            "Consensus",
+            "complete" if consensus is not None else "waiting",
+            (
+                f"{_status_int(consensus, 'accepted_units'):,} accepted / "
+                f"{_status_int(consensus, 'needs_review_units'):,} review"
+                if consensus is not None
+                else "—"
+            ),
+        )
+        table.add_row(
+            "HF review package",
+            str(package.get("status")) if package is not None else "waiting",
+            (
+                f"{_status_int(package, 'review_ready_records'):,} rows / "
+                f"{_status_int(package, 'needs_review_records'):,} excluded"
+                if package is not None
+                else "—"
+            ),
+        )
+        console.print(table)
+        budgets = _configured_token_budgets(inspect_config(config)) if config is not None else None
+        _print_live_cost(root, stage="current status", token_budgets=budgets)
+    except (OSError, StrictJsonError, ValidationError, ValueError) as exc:
+        console.print(f"[red]automation status refused:[/red] {type(exc).__name__}")
+        raise typer.Exit(code=2) from exc
 
 
 @evaluation_app.command("run")

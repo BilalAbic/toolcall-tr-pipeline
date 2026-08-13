@@ -150,11 +150,23 @@ uv run tcdata evaluation run <live-evaluation-input.jsonl> --output <disjoint-ev
 uv run tcdata automation run <canonical-1.jsonl> <canonical-2.jsonl> `
   --conflict-audit <when2call-audit.json> --conflict-audit <xlam-audit.json> `
   --output <disjoint-output> --config configs/provider-smoke.toml `
-  --episodes 1000 --max-segments 10000 `
+  --episodes 1000 --max-segments 14000 `
   --strong-pass-sample-percent 2 --live
 ```
 
 İsteğe bağlı `--source-row-cap` yalnız düşük maliyetli canary için her inputta deterministik pencere açar; 1.000’lik üretim için verilmez. Çıktıdaki `hf-review-package/<package-id>/data/train.jsonl` doğrudan HF JSON loader’a uygundur, ancak manifest `pending_human_approval` ve `publish_allowed=false` olarak kalır. Akışın ayrıntılı failover ve karar matrisi [08 — Otomatik review pipeline](docs/08-autonomous-review-pipeline.md) belgesindedir.
+
+Uzun koşu ayrı bir PowerShell penceresinde ya da `Start-Process` ile arka planda başlatılabilir. Aynı `--output` köküyle komutu tekrar çalıştırmak, mevcut translation route receipt'lerini ve judge checkpoint'lerini kullanır; tamamlanmış satırlar yeniden provider'a gönderilmez. Durumu ve run içi token/maliyet toplamını ağ/API erişimi olmadan izlemek için:
+
+```powershell
+uv run tcdata automation status <output-root> --config configs/provider-smoke.toml
+```
+
+Eski immutable artifact'ler silinmez. Yeni bir ana üretim koşusu için yeni, boş ve tarih/run-id içeren bir output kökü seçilir; yalnız yarıda kalan **aynı** koşu aynı kökle devam ettirilir. Bu ayrım, tekrar egress'i ve kanıt karışmasını engeller.
+
+İkinci ve sonraki üretim batch'leri aynı adayları yeniden seçmemelidir. Yeni output köküyle beraber `--candidate-offset` değerini önceki aday sayısı kadar artırın; örneğin ilk 1000 aday için `0`, sonraki 1000 aday için `1000`. Offset immutable candidate manifestine yazılır ve kaynaklar değiştirilmez.
+
+Ana koşudan önce aynı argümanlarla `tcdata automation plan` çağrısı yapılabilir. Bu yalnız immutable candidate manifestini yazar, gerçek episode/leaf sayısını gösterir ve hiçbir provider/API çağrısı yapmaz; planın output kökü daha sonra `automation run --live` ile aynen kullanılır.
 
 Canlı CLI her tamamlanan aşamada provider/model bazında gerçek sağlayıcı yanıtından gelen input/cache/output tokenlarını, istek sayısını ve USD fiyat kartına göre tahmini kümülatif maliyeti gösterir. Bu kayıtlar `provider-usage/` altında yalnız sayaç ve hash kimliğiyle tutulur; ham istek, yanıt veya anahtar içermez. `configs/provider-smoke.toml` Flash için 6, mini için 4, güçlü judge için 2 worker; mini için 1.8M ve güçlü judge için 225k ihtiyatlı günlük token uyarı eşiği tanımlar. Bu eşikler tek koşunun tüketimini görünür kılar; sağlayıcının hesap-geneli günlük kotasının yerine geçmez. `--workers` verilirse tüm role limitlerini açıkça override eder. `--strong-pass-sample-percent` (varsayılan `2`) güçlü judge maliyetini görünür, deterministik ve ayarlanabilir tutar; mini non-pass kayıtlar her zaman escalation’dadır.
 

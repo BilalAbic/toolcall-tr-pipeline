@@ -53,6 +53,7 @@ from toolcall_tr.field_policy import (
 from toolcall_tr.hashing import canonical_bytes
 from toolcall_tr.human_review_log import HumanEvaluationReviewEntry
 from toolcall_tr.live_evaluation import (
+    LiveEvaluationCheckpoint,
     LiveEvaluationInput,
     LiveEvaluationResult,
     LiveEvaluationRunReport,
@@ -123,7 +124,7 @@ from toolcall_tr.translation_memory import MemoryLookupKey, SegmentMemoryEntry
 MODELS = {
     "bronze-record.schema.json": BronzeRecord,
     "canonical-episode.schema.json": CanonicalEpisode,
-    "autonomous-candidate.schema.json": AutomationCandidateManifest,
+    "autonomous-candidate-0.1.1.schema.json": AutomationCandidateManifest,
     "autonomous-candidate-member.schema.json": AutomationCandidateMember,
     "autonomous-consensus.schema.json": AutomationConsensus,
     "autonomous-consensus-report.schema.json": AutomationConsensusReport,
@@ -208,6 +209,7 @@ MODELS = {
     "memory-lookup-key.schema.json": MemoryLookupKey,
     "live-preflight-decision.schema.json": LivePreflightDecision,
     "live-evaluation-input.schema.json": LiveEvaluationInput,
+    "live-evaluation-checkpoint.schema.json": LiveEvaluationCheckpoint,
     "live-evaluation-result.schema.json": LiveEvaluationResult,
     "live-evaluation-run.schema.json": LiveEvaluationRunReport,
     "openai-judge-finding-output.schema.json": JudgeFindingOutput,

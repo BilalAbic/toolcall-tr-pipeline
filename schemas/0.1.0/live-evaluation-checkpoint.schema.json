@@ -1,0 +1,588 @@
+{
+  "$defs": {
+    "EgressViolation": {
+      "additionalProperties": false,
+      "description": "A finding without the matched sensitive value.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/EgressViolationCategory"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "redactable": {
+          "title": "Redactable",
+          "type": "boolean"
+        },
+        "rule_id": {
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rule_id",
+        "category",
+        "start",
+        "end",
+        "redactable"
+      ],
+      "title": "EgressViolation",
+      "type": "object"
+    },
+    "EgressViolationCategory": {
+      "description": "Classes of content that must not leave the local pipeline.",
+      "enum": [
+        "configuration",
+        "secret",
+        "pii",
+        "local_path",
+        "private_endpoint",
+        "endpoint"
+      ],
+      "title": "EgressViolationCategory",
+      "type": "string"
+    },
+    "EvaluationUnit": {
+      "additionalProperties": false,
+      "description": "One immutable source/target leaf that may be evaluated once per run.",
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "path": {
+          "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "evaluation-unit-0.1.0",
+          "default": "evaluation-unit-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "segment_id": {
+          "pattern": "^seg_[0-9a-f]{64}$",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "source_text_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Source Text Sha256",
+          "type": "string"
+        },
+        "target_text_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Target Text Sha256",
+          "type": "string"
+        },
+        "unit_id": {
+          "pattern": "^evalunit_[0-9a-f]{64}$",
+          "title": "Unit Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit_id",
+        "episode_id",
+        "segment_id",
+        "path",
+        "source_text_sha256",
+        "target_text_sha256"
+      ],
+      "title": "EvaluationUnit",
+      "type": "object"
+    },
+    "LiveEvaluationResult": {
+      "additionalProperties": false,
+      "description": "One terminal model-triage result, with no Gold-acceptance capability.",
+      "properties": {
+        "attempt": {
+          "$ref": "#/$defs/ProviderAttemptRecord"
+        },
+        "evaluation_unit": {
+          "$ref": "#/$defs/EvaluationUnit"
+        },
+        "gold_eligible": {
+          "const": false,
+          "default": false,
+          "title": "Gold Eligible",
+          "type": "boolean"
+        },
+        "input_id": {
+          "pattern": "^liveevalinput_[0-9a-f]{64}$",
+          "title": "Input Id",
+          "type": "string"
+        },
+        "result_id": {
+          "pattern": "^liveevalresult_[0-9a-f]{64}$",
+          "title": "Result Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "live-evaluation-result-0.1.0",
+          "default": "live-evaluation-result-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "verdict": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelEvaluationVerdict"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "result_id",
+        "input_id",
+        "evaluation_unit",
+        "attempt",
+        "verdict"
+      ],
+      "title": "LiveEvaluationResult",
+      "type": "object"
+    },
+    "LivePreflightDecision": {
+      "additionalProperties": false,
+      "description": "A redaction-safe security decision; it never stores the request payload.",
+      "properties": {
+        "allowed": {
+          "title": "Allowed",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "minLength": 1,
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "payload_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Payload Sha256",
+          "type": "string"
+        },
+        "provider": {
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "live-preflight-0.1.0",
+          "default": "live-preflight-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "violations": {
+          "items": {
+            "$ref": "#/$defs/EgressViolation"
+          },
+          "title": "Violations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "provider",
+        "endpoint",
+        "payload_sha256",
+        "allowed",
+        "violations"
+      ],
+      "title": "LivePreflightDecision",
+      "type": "object"
+    },
+    "ModelConclusion": {
+      "enum": [
+        "pass",
+        "needs_human_review",
+        "fail"
+      ],
+      "type": "string"
+    },
+    "ModelEvaluationVerdict": {
+      "additionalProperties": false,
+      "description": "Provider-shaped triage record, intentionally unable to express acceptance.",
+      "properties": {
+        "conclusion": {
+          "$ref": "#/$defs/ModelConclusion"
+        },
+        "evaluation_unit": {
+          "$ref": "#/$defs/EvaluationUnit"
+        },
+        "evaluator_label": {
+          "minLength": 1,
+          "title": "Evaluator Label",
+          "type": "string"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/MqmFinding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "model-evaluation-verdict-0.1.0",
+          "default": "model-evaluation-verdict-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "unresolved_reasons": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Unresolved Reasons",
+          "type": "array"
+        },
+        "verdict_id": {
+          "pattern": "^evalverdict_[0-9a-f]{64}$",
+          "title": "Verdict Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict_id",
+        "evaluation_unit",
+        "evaluator_label",
+        "conclusion",
+        "findings",
+        "unresolved_reasons"
+      ],
+      "title": "ModelEvaluationVerdict",
+      "type": "object"
+    },
+    "MqmCategory": {
+      "enum": [
+        "accuracy.mistranslation",
+        "accuracy.omission",
+        "accuracy.addition",
+        "accuracy.untranslated",
+        "terminology",
+        "fluency.grammar",
+        "fluency.spelling",
+        "fluency.punctuation",
+        "locale_convention",
+        "style.register",
+        "tool_semantics",
+        "protected_content",
+        "research_provenance"
+      ],
+      "type": "string"
+    },
+    "MqmFinding": {
+      "additionalProperties": false,
+      "description": "One atomic MQM-style issue; compound findings must be split by callers.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/MqmCategory"
+        },
+        "evidence": {
+          "$ref": "#/$defs/SegmentPathEvidence"
+        },
+        "finding_id": {
+          "pattern": "^mqm_[0-9a-f]{64}$",
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "mqm-finding-0.1.0",
+          "default": "mqm-finding-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/MqmSeverity"
+        }
+      },
+      "required": [
+        "finding_id",
+        "category",
+        "severity",
+        "evidence",
+        "rationale"
+      ],
+      "title": "MqmFinding",
+      "type": "object"
+    },
+    "MqmSeverity": {
+      "enum": [
+        "minor",
+        "major",
+        "critical"
+      ],
+      "type": "string"
+    },
+    "ProviderAttemptOutcome": {
+      "description": "Terminal result of one adapter call or a preflight rejection.",
+      "enum": [
+        "preflight_blocked",
+        "succeeded",
+        "failed"
+      ],
+      "title": "ProviderAttemptOutcome",
+      "type": "string"
+    },
+    "ProviderAttemptRecord": {
+      "additionalProperties": false,
+      "description": "Content-addressed, safe-to-log evidence for a single provider operation.\n\n``attempt_id`` deliberately identifies the same provider/model/endpoint/body\ncombination deterministically.  A surrounding append-only event stream is\nresponsible for distinguishing repeated operator-initiated executions.",
+      "properties": {
+        "attempt_id": {
+          "pattern": "^pvattempt_[0-9a-f]{64}$",
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "endpoint": {
+          "minLength": 1,
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "failure_code": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProviderFailureCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "maximum": 599,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Http Status"
+        },
+        "model": {
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "operation": {
+          "$ref": "#/$defs/ProviderOperation"
+        },
+        "outcome": {
+          "$ref": "#/$defs/ProviderAttemptOutcome"
+        },
+        "preflight": {
+          "$ref": "#/$defs/LivePreflightDecision"
+        },
+        "provider": {
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "request_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Request Sha256",
+          "type": "string"
+        },
+        "response_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Response Sha256"
+        },
+        "retry": {
+          "$ref": "#/$defs/RetryBudgetClassification"
+        },
+        "schema_version": {
+          "const": "provider-attempt-0.1.0",
+          "default": "provider-attempt-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "attempt_id",
+        "operation",
+        "provider",
+        "model",
+        "endpoint",
+        "request_sha256",
+        "preflight",
+        "outcome",
+        "response_sha256",
+        "failure_code",
+        "http_status",
+        "retry"
+      ],
+      "title": "ProviderAttemptRecord",
+      "type": "object"
+    },
+    "ProviderFailureCode": {
+      "description": "Stable, redaction-safe reason codes; remote error text is intentionally absent.",
+      "enum": [
+        "preflight_blocked",
+        "credential_unavailable",
+        "endpoint_rejected",
+        "transport_configuration",
+        "http_transient",
+        "http_permanent",
+        "network_delivery_unknown",
+        "response_too_large",
+        "malformed_response",
+        "provider_response_invalid",
+        "provider_configuration",
+        "provider_gate",
+        "unknown"
+      ],
+      "title": "ProviderFailureCode",
+      "type": "string"
+    },
+    "ProviderOperation": {
+      "description": "The only live provider operations implemented by this project.",
+      "enum": [
+        "translation",
+        "judge"
+      ],
+      "title": "ProviderOperation",
+      "type": "string"
+    },
+    "RetryBudgetClassification": {
+      "additionalProperties": false,
+      "description": "The fixed zero automatic-retry budget prevents accidental duplicate charges.",
+      "properties": {
+        "automatic_retry_budget": {
+          "const": 0,
+          "default": 0,
+          "title": "Automatic Retry Budget",
+          "type": "integer"
+        },
+        "disposition": {
+          "$ref": "#/$defs/RetryDisposition"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "disposition",
+        "reason"
+      ],
+      "title": "RetryBudgetClassification",
+      "type": "object"
+    },
+    "RetryDisposition": {
+      "description": "A classification for an operator; the adapters never retry automatically.",
+      "enum": [
+        "not_applicable",
+        "do_not_retry",
+        "manual_retry_candidate"
+      ],
+      "title": "RetryDisposition",
+      "type": "string"
+    },
+    "SegmentPathEvidence": {
+      "additionalProperties": false,
+      "description": "Localized, bidirectional evidence for exactly one evaluation leaf.",
+      "properties": {
+        "path": {
+          "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+          "title": "Path",
+          "type": "string"
+        },
+        "segment_id": {
+          "pattern": "^seg_[0-9a-f]{64}$",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "source_excerpt": {
+          "minLength": 1,
+          "title": "Source Excerpt",
+          "type": "string"
+        },
+        "target_excerpt": {
+          "minLength": 1,
+          "title": "Target Excerpt",
+          "type": "string"
+        }
+      },
+      "required": [
+        "segment_id",
+        "path",
+        "source_excerpt",
+        "target_excerpt"
+      ],
+      "title": "SegmentPathEvidence",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One resumable, content-addressed terminal judge outcome for an input row.",
+  "properties": {
+    "checkpoint_id": {
+      "pattern": "^liveevalcheckpoint_[0-9a-f]{64}$",
+      "title": "Checkpoint Id",
+      "type": "string"
+    },
+    "config_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Config Sha256",
+      "type": "string"
+    },
+    "input_id": {
+      "pattern": "^liveevalinput_[0-9a-f]{64}$",
+      "title": "Input Id",
+      "type": "string"
+    },
+    "result": {
+      "$ref": "#/$defs/LiveEvaluationResult"
+    },
+    "role": {
+      "enum": [
+        "mini_verifier",
+        "strong_judge"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "live-evaluation-checkpoint-0.1.0",
+      "default": "live-evaluation-checkpoint-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "checkpoint_id",
+    "input_id",
+    "role",
+    "config_sha256",
+    "result"
+  ],
+  "title": "LiveEvaluationCheckpoint",
+  "type": "object"
+}

@@ -52,7 +52,7 @@ uv run tcdata automation run <canonical-jsonl>... `
   --conflict-audit <audit.json>... `
   --output <disjoint-output> `
   --config configs/provider-smoke.toml `
-  --episodes 1000 --max-segments 10000 --strong-pass-sample-percent 2 --live
+  --episodes 1000 --max-segments 14000 --strong-pass-sample-percent 2 --live
 ```
 
 `--source-row-cap` yalnız düşük maliyetli canary’dir; manifestte açıkça
@@ -63,6 +63,39 @@ arasında açık override verilebilir. Artifact kimlikleri ve sıra değişmez.
 `pass` kayıtlarının deterministik ikinci-değerlendirici örneklemidir; mini
 non-pass kayıtlar her zaman güçlü judge’a gider. Güçlü judge hiçbir zaman
 çeviri fallback’i tetiklemez.
+
+### Arka plan ve devam ettirme
+
+1000’lik koşu terminal kapansa bile aynı output köküyle yeniden çağrılabilir.
+Translation aşaması episode/route receipt'lerini, mini ve güçlü judge ise
+input-id başına immutable checkpoint'i yeniden kullanır; tamamlanmış satır için
+bir yeni provider isteği yapılmaz. Yeni bir üretim deneyinde eski kökü kullanmak
+yasaktır: yeni, boş bir output kökü yeni immutable run demektir.
+
+Bir sonraki disjoint batch için yeni kökle birlikte `--candidate-offset` verilir.
+Offset, source-stratified ve policy-covered deterministic aday akışında daha önce
+tüketilmiş aday sayısıdır: ilk batch `0`, ikinci 1000-aday batch'i `1000` kullanır.
+Bu değer candidate manifestine bağlanır; aynı kaydın iki batch'te seçilmesini
+önler.
+
+İlerleme ve maliyet, ayrı terminalden ağ veya credential okumadan izlenir:
+
+```powershell
+uv run tcdata automation status <output-root> --config configs/provider-smoke.toml
+```
+
+Komut aday/çeviri/judge/consensus/HF paket aşamalarını, checkpoint sayısını,
+provider-model bazında istek/token sayaçlarını ve tahmini USD toplamını basar.
+
+Egress öncesi gerçek aday ve leaf sayısı için aynı argümanlarla aşağıdaki plan
+komutu kullanılabilir. Bu yalnız candidate artifactini yazar; sonra aynı output
+kökü `automation run --live` ile devam ettirilir:
+
+```powershell
+uv run tcdata automation plan <canonical-jsonl>... `
+  --conflict-audit <audit.json>... --output <disjoint-output> `
+  --episodes 1000 --max-segments 14000 --candidate-offset 0
+```
 
 2026-08-13 operator dashboard limitleri `gpt-5.4-mini` için 200k TPM / 500
 RPM / 2M TPD, `gpt-5.4` için 500k TPM / 500 RPM / 900k TPD'dir. Proje bunların
