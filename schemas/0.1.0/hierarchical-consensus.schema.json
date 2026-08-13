@@ -1,0 +1,206 @@
+{
+  "$defs": {
+    "EvaluationUnit": {
+      "additionalProperties": false,
+      "description": "One immutable source/target leaf that may be evaluated once per run.",
+      "properties": {
+        "episode_id": {
+          "pattern": "^ep_[0-9a-f]{64}$",
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "path": {
+          "pattern": "^(?:/(?:[^/~]|~[01])*)*$",
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "evaluation-unit-0.1.0",
+          "default": "evaluation-unit-0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "segment_id": {
+          "pattern": "^seg_[0-9a-f]{64}$",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "source_text_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Source Text Sha256",
+          "type": "string"
+        },
+        "target_text_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Target Text Sha256",
+          "type": "string"
+        },
+        "unit_id": {
+          "pattern": "^evalunit_[0-9a-f]{64}$",
+          "title": "Unit Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unit_id",
+        "episode_id",
+        "segment_id",
+        "path",
+        "source_text_sha256",
+        "target_text_sha256"
+      ],
+      "title": "EvaluationUnit",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Final decision after mini-first review and optional strong escalation.",
+  "properties": {
+    "consensus_id": {
+      "pattern": "^autohconsensus_[0-9a-f]{64}$",
+      "title": "Consensus Id",
+      "type": "string"
+    },
+    "escalation_reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "mini_non_pass",
+            "pass_sample"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Escalation Reason"
+    },
+    "evaluation_unit": {
+      "$ref": "#/$defs/EvaluationUnit"
+    },
+    "final_conclusion": {
+      "enum": [
+        "pass",
+        "needs_human_review",
+        "fail",
+        "unavailable"
+      ],
+      "title": "Final Conclusion",
+      "type": "string"
+    },
+    "final_decider": {
+      "enum": [
+        "mini",
+        "strong"
+      ],
+      "title": "Final Decider",
+      "type": "string"
+    },
+    "gold_eligible": {
+      "const": false,
+      "default": false,
+      "title": "Gold Eligible",
+      "type": "boolean"
+    },
+    "mini_conclusion": {
+      "enum": [
+        "pass",
+        "needs_human_review",
+        "fail",
+        "unavailable"
+      ],
+      "title": "Mini Conclusion",
+      "type": "string"
+    },
+    "mini_result_id": {
+      "pattern": "^liveevalresult_[0-9a-f]{64}$",
+      "title": "Mini Result Id",
+      "type": "string"
+    },
+    "mini_verdict_id": {
+      "anyOf": [
+        {
+          "pattern": "^evalverdict_[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Mini Verdict Id"
+    },
+    "schema_version": {
+      "const": "hierarchical-consensus-0.1.0",
+      "default": "hierarchical-consensus-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "accepted_for_review_package",
+        "needs_review"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "strong_conclusion": {
+      "anyOf": [
+        {
+          "enum": [
+            "pass",
+            "needs_human_review",
+            "fail",
+            "unavailable"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Strong Conclusion"
+    },
+    "strong_result_id": {
+      "anyOf": [
+        {
+          "pattern": "^liveevalresult_[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Strong Result Id"
+    },
+    "strong_verdict_id": {
+      "anyOf": [
+        {
+          "pattern": "^evalverdict_[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Strong Verdict Id"
+    }
+  },
+  "required": [
+    "consensus_id",
+    "evaluation_unit",
+    "mini_result_id",
+    "mini_verdict_id",
+    "mini_conclusion",
+    "escalation_reason",
+    "strong_result_id",
+    "strong_verdict_id",
+    "strong_conclusion",
+    "final_decider",
+    "final_conclusion",
+    "status"
+  ],
+  "title": "HierarchicalConsensus",
+  "type": "object"
+}

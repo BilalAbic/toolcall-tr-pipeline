@@ -14,7 +14,11 @@ from urllib.parse import urlsplit
 
 from toolcall_tr.config import PipelineConfig
 from toolcall_tr.hashing import JsonValue, canonical_bytes
-from toolcall_tr.live_preflight import LivePreflightBlockedError, preflight_live_request
+from toolcall_tr.live_preflight import (
+    LivePreflightBlockedError,
+    LivePreflightDecision,
+    preflight_live_request,
+)
 from toolcall_tr.prompt_contract import PromptBundle
 from toolcall_tr.provider_adapter import (
     ProviderConfigurationError,
@@ -27,6 +31,10 @@ from toolcall_tr.provider_provenance import (
     ProviderOperation,
     build_provider_attempt_record,
     emit_provider_attempt,
+)
+from toolcall_tr.provider_usage import (
+    ProviderUsageSink,
+    emit_response_usage,
 )
 from toolcall_tr.translation_contract import (
     TranslationContractError,
@@ -78,13 +86,13 @@ def serialize_deepseek_translation_request(
                 "content": (
                     f"{prompt.system_text}\n\n"
                     "Return exactly one JSON object, not the request object, with this exact "
-                    "top-level shape: {\"schema_version\":\"translation-response-0.1.0\","
-                    "\"request_id\":\"the exact request_id from the input\","
-                    "\"status\":\"translated\" or \"research_needed\","
-                    "\"segments\":[{\"segment_id\":\"the exact input segment_id\","
-                    "\"target_text\":\"Turkey Turkish translation preserving sentinels\","
-                    "\"research_needed\":false,\"uncertainty_tags\":[]}],"
-                    "\"term_queries\":[]}. Include no input-only fields, markdown, "
+                    'top-level shape: {"schema_version":"translation-response-0.1.0",'
+                    '"request_id":"the exact request_id from the input",'
+                    '"status":"translated" or "research_needed",'
+                    '"segments":[{"segment_id":"the exact input segment_id",'
+                    '"target_text":"Turkey Turkish translation preserving sentinels",'
+                    '"research_needed":false,"uncertainty_tags":[]}],'
+                    '"term_queries":[]}. Include no input-only fields, markdown, '
                     "explanatory text, or additional keys."
                 ),
             },
@@ -140,11 +148,42 @@ class DeepSeekTranslationAdapter:
         transport: ResponsesTransport,
         max_output_tokens: int = 1_024,
         attempt_sink: ProviderAttemptSink | None = None,
+        usage_sink: ProviderUsageSink | None = None,
     ) -> None:
         self._config = config
         self._transport = transport
         self._max_output_tokens = max_output_tokens
         self._attempt_sink = attempt_sink
+        self._usage_sink = usage_sink
+
+    def _emit_terminal(
+        self,
+        *,
+        request_body: bytes,
+        preflight: LivePreflightDecision,
+        provider: str,
+        model: str,
+        endpoint: str,
+        error: BaseException | None = None,
+        response_body: bytes | None = None,
+    ) -> None:
+        """Persist provenance before optional token counters for one terminal path."""
+        record = build_provider_attempt_record(
+            operation=ProviderOperation.TRANSLATION,
+            provider=provider,
+            model=model,
+            endpoint=endpoint,
+            request_body=request_body,
+            preflight=preflight,
+            error=error,
+            response_body=response_body,
+        )
+        emit_provider_attempt(self._attempt_sink, record)
+        emit_response_usage(
+            self._usage_sink,
+            attempt=record,
+            response_body=response_body,
+        )
 
     def translate(
         self, *, request: TranslationRequest, prompt: PromptBundle
@@ -175,24 +214,19 @@ class DeepSeekTranslationAdapter:
             payload=canonical_bytes(
                 {
                     "segments": [
-                        {"source_text": segment.source_text}
-                        for segment in request.segments
+                        {"source_text": segment.source_text} for segment in request.segments
                     ],
                     "terminology_evidence": request.terminology_evidence,
                 }
             ),
         )
         if not preflight.allowed:
-            emit_provider_attempt(
-                self._attempt_sink,
-                build_provider_attempt_record(
-                    operation=ProviderOperation.TRANSLATION,
-                    provider=role.provider,
-                    model=role.model,
-                    endpoint=role.endpoint,
-                    request_body=request_body,
-                    preflight=preflight,
-                ),
+            self._emit_terminal(
+                request_body=request_body,
+                preflight=preflight,
+                provider=role.provider,
+                model=role.model,
+                endpoint=role.endpoint,
             )
             raise LivePreflightBlockedError(preflight)
 
@@ -210,45 +244,33 @@ class DeepSeekTranslationAdapter:
             error = ProviderResponseError(
                 "DeepSeek JSON output violates the local translation contract"
             )
-            emit_provider_attempt(
-                self._attempt_sink,
-                build_provider_attempt_record(
-                    operation=ProviderOperation.TRANSLATION,
-                    provider=role.provider,
-                    model=role.model,
-                    endpoint=role.endpoint,
-                    request_body=request_body,
-                    preflight=preflight,
-                    error=error,
-                    response_body=raw_response,
-                ),
-            )
-            raise error from exc
-        except Exception as exc:
-            emit_provider_attempt(
-                self._attempt_sink,
-                build_provider_attempt_record(
-                    operation=ProviderOperation.TRANSLATION,
-                    provider=role.provider,
-                    model=role.model,
-                    endpoint=role.endpoint,
-                    request_body=request_body,
-                    preflight=preflight,
-                    error=exc,
-                    response_body=raw_response,
-                ),
-            )
-            raise
-        emit_provider_attempt(
-            self._attempt_sink,
-            build_provider_attempt_record(
-                operation=ProviderOperation.TRANSLATION,
+            self._emit_terminal(
+                request_body=request_body,
+                preflight=preflight,
                 provider=role.provider,
                 model=role.model,
                 endpoint=role.endpoint,
+                error=error,
+                response_body=raw_response,
+            )
+            raise error from exc
+        except Exception as exc:
+            self._emit_terminal(
                 request_body=request_body,
                 preflight=preflight,
+                provider=role.provider,
+                model=role.model,
+                endpoint=role.endpoint,
+                error=exc,
                 response_body=raw_response,
-            ),
+            )
+            raise
+        self._emit_terminal(
+            request_body=request_body,
+            preflight=preflight,
+            provider=role.provider,
+            model=role.model,
+            endpoint=role.endpoint,
+            response_body=raw_response,
         )
         return response

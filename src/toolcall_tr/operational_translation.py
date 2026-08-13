@@ -40,6 +40,7 @@ from toolcall_tr.provider_provenance import (
     ProviderAttemptRecord,
     ProviderOperation,
 )
+from toolcall_tr.provider_usage import ProviderUsageRecord
 from toolcall_tr.translation_contract import (
     ProtectedToken,
     TranslationRequest,
@@ -301,11 +302,22 @@ def _leaf_record(
             canonical_bytes(record) + b"\n",
         )
 
+    def persist_usage(record: ProviderUsageRecord) -> None:
+        if record.attempt_id != job.attempt_id:
+            raise OperationalTranslationError(
+                "adapter emitted provider usage with unexpected attempt identity"
+            )
+        publish_bytes_atomic(
+            root / "provider-usage" / f"{record.usage_id}.json",
+            canonical_bytes(record) + b"\n",
+        )
+
     response = DeepSeekTranslationAdapter(
         config=config,
         transport=transport,
         max_output_tokens=1_024,
         attempt_sink=persist_attempt,
+        usage_sink=persist_usage,
     ).translate(request=job.request, prompt=prompt)
     result = response.segments[0]
     status: Literal["translated", "research_needed"] = (

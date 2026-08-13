@@ -1,8 +1,8 @@
 # 01 — Kararlar ve kapsam
 
-Durum: **Faz 1–5 sözleşmeleri, sınırlı canlı provider yüzeyi ve en çok 30 episode'luk pre-review canary `0.1.0` olarak uygulandı; iki gerçek kaynakta modelsiz pilot kanıtı vardır**
+Durum: **Faz 1–5 sözleşmeleri, sınırlı canlı provider yüzeyi ve 50 episode'luk bounded automation regression'ı uygulandı; iki gerçek kaynakta modelsiz pilot kanıtı vardır**
 
-Bu belgedeki V1 kararları hedef sözleşmeyi tarif eder. Bugün çalışan yüzey; strict schema, kimlik/hash, snapshot/ingest, artifact/event, kaynak-biçimli adapterlar, canonicalizer, tool registry, explicit-kanıtlı source-evidence Pass 1, duplicate/conflict audit, insan-kapılı selection freeze, field-policy/host merge, pre-egress guard, canlı provider adapterları, en çok 30 episode'luk pre-review canary ve review/release kapılarını içerir. NVIDIA When2Call ve Salesforce xLAM 60k üzerinde modelsiz pilotlar tamamlanmıştır; ayrıca conflict-free 3 When2Call episode'u canlı canary'de çevrilip model-triage edildi. Bu, insan adjudication, S400 kabulü veya release izni değildir. Ayrıntılı kanıt tablosu için [06 — Uygulama durumu](06-implementation-status.md) belgesine bakın.
+Bu belgedeki V1 kararları hedef sözleşmeyi tarif eder. Bugün çalışan yüzey; strict schema, kimlik/hash, snapshot/ingest, artifact/event, kaynak-biçimli adapterlar, canonicalizer, tool registry, explicit-kanıtlı source-evidence Pass 1, duplicate/conflict audit, insan-kapılı selection freeze, field-policy/host merge, pre-egress guard, canlı provider adapterları, pre-review canary, bounded automation ve review/release kapılarını içerir. NVIDIA When2Call ve Salesforce xLAM 60k üzerinde modelsiz pilotlar tamamlanmıştır; ayrıca güncel `translation-prompt-0.3.0` / Flash 6-worker regression'ında 50 conflict-free adayın 46'sı çevrilmiş, 547 leaf'in 541'i kabul edilmiş ve 40 satırlık HF review paketi üretilmiştir. Aktif v0.4 prompt bu kanıttaki altı strong-judge bulgusundan türetilmiştir ve ayrı batch'te doğrulanacaktır. Bu, insan adjudication, S400 kabulü veya release izni değildir. Ayrıntılı kanıt tablosu için [06 — Uygulama durumu](06-implementation-status.md) belgesine bakın.
 
 ## 1. Başarı tanımı
 
@@ -177,3 +177,12 @@ Target veya gerekli tool tanımı truncation ile kesilirse kayıt sessizce kısa
 - [Hugging Face TRL konuşma ve tool-calling formatları](https://huggingface.co/docs/trl/en/dataset_formats)
 - [Hugging Face Datasets JSON feature](https://huggingface.co/docs/datasets/about_dataset_features)
 - [MQM çeviri kalite çerçevesi](https://www.jostrans.org/article/view/8074)
+- [W3C PROV-DM — Provenance Data Model](https://www.w3.org/TR/prov-dm/)
+- [C2PA Technical Specification](https://c2pa.org/specifications/)
+- [MLCommons Croissant — ML-ready dataset metadata](https://docs.mlcommons.org/croissant/docs/croissant-spec-1.1.html)
+- [RO-Crate — research object packaging](https://www.researchobject.org/ro-crate/)
+- [Datasheets for Datasets (Gebru et al.)](https://arxiv.org/abs/1803.09010)
+- [Model Cards (Mitchell et al.)](https://arxiv.org/abs/1810.03993)
+- [DVC — Data Version Control](https://dvc.org/doc)
+- [NIST AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework)
+- [EU AI Act, Article 50 — AI-content transparency](https://artificialintelligenceact.eu/article/50/)

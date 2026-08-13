@@ -1,6 +1,6 @@
 # 04 — Uygulama planı ve kabul kapıları
 
-Bu planın Faz 1–4 çekirdeği ve Faz 5'in sözleşme/güvenlik katmanı fixture/property testleriyle uygulanmıştır. DeepSeek V4 çeviri ve OpenAI Responses judge adapterları sabit sentetik smoke girdileriyle ve source-explicit/conflict-free 3 episode / 20 leaf pre-review canary ile canlı endpointte doğrulanmıştır. NVIDIA When2Call'ın test ve train split'leri ile Salesforce xLAM 60k train kaynağı revision-pinned, modelsiz snapshot → ingest → canonical → audit pilotlarından geçti. İnsan adjudication, S400 üyeliği veya release üretilmedi. Faz 6–9 için yetkili insan kararları zorunludur; sistem bunları uydurmaz. Aşamalar atlanmayacak; her fazın kapısı geçmeden sonraki faz üretim verisine açılmayacaktır. Test edilmiş özellikler ile açık maddelerin kanıt tablosu [06 — Uygulama durumu](06-implementation-status.md) belgesindedir.
+Bu planın Faz 1–4 çekirdeği ve Faz 5'in sözleşme/güvenlik katmanı fixture/property testleriyle uygulanmıştır. DeepSeek V4 çeviri ve OpenAI Responses judge adapterları sabit sentetik smoke girdileriyle, source-explicit/conflict-free 3 episode / 20 leaf pre-review canary ile ve ayrı 50-episode bounded automation regression'ıyla canlı endpointte doğrulanmıştır. Güncel v0.3 / Flash 6-worker koşusu 46 translation, 541 accepted leaf ve 40 pending-HF review row üretti; v0.4 prompt bu koşudaki altı strong-judge fail'den türetildi ve sonraki immutable batch'te ölçülecektir. NVIDIA When2Call'ın test ve train split'leri ile Salesforce xLAM 60k train kaynağı revision-pinned, modelsiz snapshot → ingest → canonical → audit pilotlarından geçti. İnsan adjudication, S400 üyeliği veya release üretilmedi. Faz 6–9 için yetkili insan kararları zorunludur; sistem bunları uydurmaz. Aşamalar atlanmayacak; her fazın kapısı geçmeden sonraki faz üretim verisine açılmayacaktır. Test edilmiş özellikler ile açık maddelerin kanıt tablosu [06 — Uygulama durumu](06-implementation-status.md) belgesindedir.
 
 ## Faz 0 — Plan freeze
 
@@ -82,7 +82,7 @@ Kapı:
 - JSONL sharding, streaming scan ve yeniden üretilebilir index testleri,
 - yarım/bozuk shard'ın publish edilmemesi ve aynı run'ın atomic-resume testi,
 - bilinmeyen diagnostic kodunun fail-closed reddedilmesi ve exit-code sözleşmesi,
-- varsayılan akışta hiçbir provider çağrısı yok; canlı smoke/batch yalnız explicit `--live`, non-default config, preflight ve disjoint output ile açılır. İnsan review/selection öncesinde yalnız source-explicit, conflict-free, alias-dışı ve en çok 30 episode'luk pre-review canary egress'i yapılabilir; S400/Gold/release kapalı kalır.
+- varsayılan akışta hiçbir provider çağrısı yok; canlı smoke/batch yalnız explicit `--live`, non-default config, preflight ve disjoint output ile açılır. Pre-review canary en çok 30 episode ile sınırlıdır; ayrı `automation run` yalnız source-explicit, conflict-free ve alias-dışı cohort'ta explicit episode/leaf bütçesi altında bounded egress yapabilir. S400/Gold/release kapalı kalır.
 
 ## Faz 2 — Source register ve ID-first ingest
 
@@ -130,7 +130,7 @@ Kapı: iki datasetin tamamı canonicalize veya gerekçeli quarantine olur; kayı
 
 ## Faz 4 — Kaynak doğruluğu, duplicate, conflict ve selection
 
-Durum: **altyapı fixture düzeyinde; gerçek exact conflict kanıtı When2Call cross-split (136) ve xLAM 60k (6) üzerinde üretilmiştir.** Explicit Pointer kanıtlı Pass 1, deterministic `source_review`/`source_invalid` routing, exact alias/conflict audit, review-only near-duplicate retrieval, connected-component split guard, append-only human-adjudication logu, karar üretmeyen `review prepare` worklist'i, en çok 30 episode'luk conflict-free pre-review canary ve S400 prefix freeze kod/test yüzeyinde mevcuttur. Pre-review canary, prompt/provider testini insan kabulundan önce yürütür ancak `source_valid`, insan kararı veya S400 freeze üretmez; 2.841 karantina ile 142 conflict için yerel worklist açıktır.
+Durum: **altyapı fixture düzeyinde; gerçek exact conflict kanıtı When2Call cross-split (136) ve xLAM 60k (6) üzerinde üretilmiştir.** Explicit Pointer kanıtlı Pass 1, deterministic `source_review`/`source_invalid` routing, exact alias/conflict audit, review-only near-duplicate retrieval, connected-component split guard, append-only human-adjudication logu, karar üretmeyen `review prepare` worklist'i, en çok 30 episode'luk conflict-free pre-review canary, bounded automation candidate cohort'u ve S400 prefix freeze kod/test yüzeyinde mevcuttur. Bounded 50-episode regression yalnız model/prompt/provider yolunu test eder; `source_valid`, insan kararı veya S400 freeze üretmez. 2.841 karantina ile 142 conflict için yerel worklist açıktır.
 
 Kurulacaklar:
 
@@ -166,7 +166,7 @@ Kapı:
 
 ## Faz 5 — Prompt ve eval laboratuvarı
 
-Durum: **yerel sözleşme/güvenlik altkümesi ve sınırlı canlı smoke/pre-review canary uygulandı.** Field policy, yalnız leaf segment extraction/host merge, sentinel-bütünlüğü request/response doğrulaması, immutable prompt bundle, kayıtlı-response fake provider, pre-egress scan, exact human-promoted memory, not-sent research policy ve atomic MQM/Wilson/human-only acceptance sözleşmesi fixture testleriyle vardır. DeepSeek V4 çevirici ve OpenAI Responses judge, allow-list'li secret resolver, public HTTPS/no-redirect transport ve preflight arkasında sabit sentetik isteklerle; ayrıca 3 source-explicit/conflict-free When2Call episode'unun 20 leaf'iyle doğrulanmıştır. Automated repair, S400/Gold/release ve insan-review yerine geçecek hiçbir model kararı yoktur.
+Durum: **yerel sözleşme/güvenlik altkümesi ve bounded canlı yürütme uygulandı.** Field policy, yalnız leaf segment extraction/host merge, sentinel-bütünlüğü request/response doğrulaması, immutable prompt bundle, kayıtlı-response fake provider, pre-egress scan, exact human-promoted memory, not-sent research policy ve atomic MQM/Wilson/human-only acceptance sözleşmesi fixture testleriyle vardır. DeepSeek V4 çevirici ve OpenAI Responses judge, allow-list'li secret resolver, public HTTPS/no-redirect transport ve preflight arkasında sabit sentetik isteklerle; ayrıca 3 source-explicit/conflict-free When2Call episode'unun 20 leaf'i ve 50 adaylık v0.3 / Flash 6-worker regression ile doğrulanmıştır. Automated repair, S400/Gold/release ve insan-review yerine geçecek hiçbir model kararı yoktur.
 
 Üretim API'sinden önce:
 
@@ -294,7 +294,7 @@ Tamamlanan temel Faz 1–5 altyapısı ve sınırlı canlı operasyon yüzeyidir
 7. property-based testler,
 8. `inspect` ve `stats` CLI'sı.
 
-Gerçek çeviri/judge API kanıtı; sentetik smoke, source-explicit/conflict-free 3 episode / 20 leaf pre-review canary ve 50 canonical adaylık bounded automation koşusunu içerir. Son koşu 46 translation, 456 two-judge-pass leaf ve 12 satırlık `pending_human_approval` HF JSONL review package üretti; Gold veya publish yapmadı. Kimlik, veri formatı, immutable publish ve tekrar-almama garantileri fixture/property testleriyle doğrulanır; iki gerçek kaynak için tam canonical/karantina muhasebesi modelsiz pilotta tamamlanmıştır.
+Gerçek çeviri/judge API kanıtı; sentetik smoke, source-explicit/conflict-free 3 episode / 20 leaf pre-review canary, tarihsel iki-judge 50-aday koşusu ve güncel 50 canonical adaylık v0.3 / Flash 6-worker regression'ını içerir. Güncel koşu 46 translation, 541 accepted hierarchical-consensus leaf ve 40 satırlık `pending_human_approval` HF JSONL review package üretti; tahmini maliyet `$0.556529` oldu. Gold veya publish yapılmadı. Kimlik, veri formatı, immutable publish ve tekrar-almama garantileri fixture/property testleriyle doğrulanır; iki gerçek kaynak için tam canonical/karantina muhasebesi modelsiz pilotta tamamlanmıştır.
 
 ## Plan değişiklik kuralı
 

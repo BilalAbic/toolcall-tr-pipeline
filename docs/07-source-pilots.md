@@ -22,9 +22,9 @@ içermez. Kaynak snapshotları `sources/`, türetilmiş JSONL ve pilot kanıtlar
   worklist'e dönüştürüldü; kaynak satırı, credential veya reviewer kararı
   worklist'e yazılmadı.
 
-## Bounded automation canlı koşusu
+## Tarihsel iki-judge bounded automation koşusu
 
-2026-08-13'te `automation run`, When2Call ve xLAM canonical artifactlarının
+2026-08-13'te önceki iki-judge sürümündeki `automation run`, When2Call ve xLAM canonical artifactlarının
 her birinde deterministic ilk 500 source-row penceresinden 50 source-explicit,
 policy-covered, conflict-free/alias-dışı episode seçti. Bu pencere ve 600-leaf
 üst sınırı candidate manifestine bağlandı; kaynak satırları değişmedi.
@@ -40,6 +40,60 @@ policy-covered, conflict-free/alias-dışı episode seçti. Bu pencere ve 600-le
 
 Paket yalnız yerel ignore edilmiş artifact kökündedir. `publish_allowed=false`
 olduğu için Gold/release veya Hugging Face upload yapılmamıştır.
+
+## Seçici-escalation canlı koşusu
+
+2026-08-13’te aynı immutable canonical/audit girdileri üzerinde
+`when2call-xlam-50-hierarchical-cost-20260813` ayrı bir output kökünde
+çalıştırıldı. Bu koşu Flash → güvenli hatada Pro → tüm leaf’lerde mini judge →
+mini non-pass ve mini-pass örneklemi için güçlü judge yolunu kullandı. Koşudaki
+pass örneklemi o anki config ile `%10` idi; kodun sonraki varsayılanı maliyeti
+azaltmak için `%2`dir. İki koşunun artifactleri birbirini değiştirmez.
+
+| Aşama | Sonuç |
+|---|---|
+| Candidate | 50 episode / 524 policy-izinli leaf; `autocand_7005053d…8a6ac` |
+| Translation | 45 host-merged translation, 5 `needs_review`, 0 Flash → Pro route |
+| Mini judge | 524 input; 508 `pass`, 11 `fail`, 1 `needs_human_review`, 4 unavailable |
+| Strong judge | 70 escalation: 54 mini-pass örneklemi + 16 mini non-pass; 54 `pass`, 3 `fail`, 4 `needs_human_review`, 9 unavailable |
+| Hierarchical consensus | 508 accepted leaf, 16 `needs_review`; `autohconsreport_34ff5156…ffdc` |
+| HF review package | 34 strict `silver_candidate` JSONL satırı; `hfpackage_7f135e7c…92887`; `pending_human_approval` |
+| Token/maliyet | DeepSeek Flash `$0.032936`, GPT-5.4-mini `$0.354575`, GPT-5.4 `$0.196588`; toplam tahmini `$0.584098` |
+
+Bu sonuçlar model quality proof’tur; `publish_allowed=false`, Gold/release veya
+Hugging Face upload yapılmamıştır. Canlı inceleme, `reverse_input:/input_value`
+ve `qrcode:/data` gibi doğal dil görebilen argument yollarının başka kayıtlarda
+çok-türlü değer ya da identifier de taşıdığını ortaya koydu. Bu nedenle global
+argument `copy_exact` politikası korunmuştur.
+
+## Prompt v3 ve Flash 6-worker regresyonu
+
+Bu regression’daki `translation-prompt-0.3.0`, daha kesin judge output kontratı,
+varsayılan `%2` strong-pass örneklemi ve Flash için 6 worker ile aynı immutable
+50-episode cohort üzerinde `when2call-xlam-50-prompt-v3-workers6-20260813`
+ayrı output kökünde canlı doğrulandı. Kaynak, candidate manifesti ve önceki
+artifactler değiştirilmedi.
+
+| Aşama | Sonuç |
+|---|---|
+| Candidate | Aynı 50 episode / 599 policy-izinli leaf; `autocand_7005053d…8a6ac` |
+| Translation | 46 host-merged translation, 4 `needs_review`; bir güvenli Flash → Pro fallback route (27 Pro leaf isteği) |
+| Mini judge | 547 tamamlanmış structured verdict: 520 `pass`, 23 `fail`, 4 `needs_human_review` |
+| Strong judge | 36 escalation: 27 mini non-pass + 9 `%2` pass örneklemi; 30 `pass`, 6 `fail` |
+| Hierarchical consensus | 541 accepted leaf, 6 `needs_review`; `autohconsreport_c71c67d6…7631` |
+| HF review package | 40 strict `silver_candidate` JSONL satırı, 10 episode dışarıda; `hfpackage_fe196677…7a50e`; `pending_human_approval` |
+| Token/maliyet | Flash `$0.043040`, Pro `$0.007286`, GPT-5.4-mini `$0.409261`, GPT-5.4 `$0.096943`; toplam tahmini `$0.556529` |
+
+Mini ve strong judge response-contract başarısı `547/547` ve `36/36` oldu;
+önceki iki canlı koşuda görülen unavailable sonuç bu regression’da oluşmadı.
+Bu bir kalite/maliyet kanıtıdır, otomatik Gold/release veya Hugging Face upload
+yetkisi değildir.
+
+Strong judge’ın altı doğrulanmış fail’i (gaz/benzin anlam daraltması, `null`
+temsil ilişkisi, entity-address attachment, konum kapsamı ve iki akıcılık/terim
+calque’u) `translation-prompt-0.4.0` için dar karşıt örneklere dönüştürüldü.
+v0.4 sonraki ayrı immutable batch’te canlı doğrulanacaktır; bu mevcut kanıt
+artifactini değiştirmez.
 
 ## NVIDIA When2Call
 

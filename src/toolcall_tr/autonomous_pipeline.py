@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, Literal, cast
 
-from pydantic import Field, model_validator
+from pydantic import Field, ValidationError, model_validator
 
 from toolcall_tr.artifacts import ContentManifest, publish_bytes_atomic, publish_jsonl_artifact
 from toolcall_tr.audit import AuditId, ExactConflictAudit
@@ -51,6 +51,7 @@ from toolcall_tr.operational_translation import (
 from toolcall_tr.prompt_contract import PromptBundle
 from toolcall_tr.provider_adapter import ProviderAdapterError, ResponsesTransport
 from toolcall_tr.provider_provenance import ProviderAttemptRecord, ProviderFailureCode
+from toolcall_tr.provider_usage import ProviderUsageSinkError
 from toolcall_tr.secure_transport import SecureTransportError
 
 AUTOMATION_POLICY_VERSION = "autonomous-candidate-0.1.0"
@@ -284,6 +285,87 @@ class AutomationConsensusReport(StrictModel):
         return self
 
 
+class HierarchicalConsensus(StrictModel):
+    """Final decision after mini-first review and optional strong escalation."""
+
+    schema_version: Literal["hierarchical-consensus-0.1.0"] = "hierarchical-consensus-0.1.0"
+    consensus_id: Annotated[str, Field(pattern=r"^autohconsensus_[0-9a-f]{64}$")]
+    evaluation_unit: EvaluationUnit
+    mini_result_id: Annotated[str, Field(pattern=r"^liveevalresult_[0-9a-f]{64}$")]
+    mini_verdict_id: Annotated[str, Field(pattern=r"^evalverdict_[0-9a-f]{64}$")] | None
+    mini_conclusion: Literal["pass", "needs_human_review", "fail", "unavailable"]
+    escalation_reason: Literal["mini_non_pass", "pass_sample"] | None
+    strong_result_id: Annotated[str, Field(pattern=r"^liveevalresult_[0-9a-f]{64}$")] | None
+    strong_verdict_id: Annotated[str, Field(pattern=r"^evalverdict_[0-9a-f]{64}$")] | None
+    strong_conclusion: Literal["pass", "needs_human_review", "fail", "unavailable"] | None
+    final_decider: Literal["mini", "strong"]
+    final_conclusion: Literal["pass", "needs_human_review", "fail", "unavailable"]
+    status: Literal["accepted_for_review_package", "needs_review"]
+    gold_eligible: Literal[False] = False
+
+    @model_validator(mode="after")
+    def validate_hierarchy(self) -> HierarchicalConsensus:
+        mini_available = self.mini_conclusion != "unavailable"
+        strong_available = self.strong_conclusion not in {None, "unavailable"}
+        if mini_available != (self.mini_verdict_id is not None):
+            raise ValueError("mini verdict ID must match mini availability")
+        if self.escalation_reason is None:
+            if (
+                self.mini_conclusion != "pass"
+                or self.strong_result_id is not None
+                or self.strong_verdict_id is not None
+                or self.strong_conclusion is not None
+                or self.final_decider != "mini"
+                or self.final_conclusion != "pass"
+                or self.status != "accepted_for_review_package"
+            ):
+                raise ValueError("only an unsampled mini pass may finish at the mini stage")
+        else:
+            if self.strong_result_id is None or self.strong_conclusion is None:
+                raise ValueError("escalation requires one strong terminal result")
+            if strong_available != (self.strong_verdict_id is not None):
+                raise ValueError("strong verdict ID must match strong availability")
+            if self.final_decider != "strong" or self.final_conclusion != self.strong_conclusion:
+                raise ValueError("escalated decision must be decided by the strong result")
+        if (self.status == "accepted_for_review_package") != (self.final_conclusion == "pass"):
+            raise ValueError("only a final pass may enter the review package")
+        body = self.model_dump(mode="json", exclude={"consensus_id"})
+        if self.consensus_id != stable_id("autohconsensus", body):
+            raise ValueError("hierarchical consensus ID does not match deterministic content")
+        return self
+
+
+class HierarchicalConsensusReport(StrictModel):
+    """Receipt for one mini-first, selectively escalated quality decision set."""
+
+    schema_version: Literal["hierarchical-consensus-report-0.1.0"] = (
+        "hierarchical-consensus-report-0.1.0"
+    )
+    report_id: Annotated[str, Field(pattern=r"^autohconsreport_[0-9a-f]{64}$")]
+    mini_results_sha256: Sha256
+    strong_results_sha256: Sha256 | None
+    pass_sample_basis_points: Annotated[int, Field(ge=0, le=10_000)]
+    requested_units: Annotated[int, Field(gt=0)]
+    strong_escalated_units: Annotated[int, Field(ge=0)]
+    accepted_units: Annotated[int, Field(ge=0)]
+    needs_review_units: Annotated[int, Field(ge=0)]
+    consensus_manifest_id: Annotated[str, Field(pattern=r"^manifest_[0-9a-f]{64}$")]
+    gold_release_allowed: Literal[False] = False
+
+    @model_validator(mode="after")
+    def validate_report(self) -> HierarchicalConsensusReport:
+        if self.requested_units != self.accepted_units + self.needs_review_units:
+            raise ValueError("hierarchical consensus row accounting must balance")
+        if self.strong_escalated_units > self.requested_units:
+            raise ValueError("strong escalation cannot exceed requested units")
+        body = self.model_dump(mode="json", exclude={"report_id"})
+        if self.report_id != stable_id("autohconsreport", body):
+            raise ValueError(
+                "hierarchical consensus report ID does not match deterministic content"
+            )
+        return self
+
+
 class HuggingFaceDatasetRow(StrictModel):
     """One JSONL row directly loadable as a nested tool-calling dataset."""
 
@@ -295,6 +377,20 @@ class HuggingFaceDatasetRow(StrictModel):
     source_snapshot_ids: list[str]
     quality_tier: Literal["silver_candidate"] = "silver_candidate"
     consensus_status: Literal["two_judge_pass"] = "two_judge_pass"
+    human_approval_required: Literal[True] = True
+
+
+class HierarchicalHuggingFaceDatasetRow(StrictModel):
+    """One current JSONL row directly loadable as a nested tool-calling dataset."""
+
+    schema_version: Literal["hf-tool-calling-row-0.1.1"] = "hf-tool-calling-row-0.1.1"
+    id: EpisodeId
+    messages: list[Message]
+    tools: list[CanonicalTool]
+    source_dataset_namespace: str
+    source_snapshot_ids: list[str]
+    quality_tier: Literal["silver_candidate"] = "silver_candidate"
+    consensus_status: Literal["accepted_for_review_package"] = "accepted_for_review_package"
     human_approval_required: Literal[True] = True
 
 
@@ -557,6 +653,8 @@ def _alternate_translator_model(config: PipelineConfig, model: str) -> PipelineC
         endpoint=role.endpoint,
         temperature=role.temperature,
         thinking=role.thinking,
+        max_workers=role.max_workers,
+        daily_token_budget=role.daily_token_budget,
     )
     return PipelineConfig(
         schema_version=config.schema_version,
@@ -664,6 +762,7 @@ def _run_route(
         LivePreflightBlockedError,
         OperationalTranslationError,
         ProviderAdapterError,
+        ProviderUsageSinkError,
         SecureTransportError,
         ValueError,
     ):
@@ -717,7 +816,7 @@ def run_automation_translation(
     transport: ResponsesTransport,
     max_workers: int = 1,
 ) -> AutomationTranslationReport:
-    """Translate every candidate, continuing after failures with one fallback route."""
+    """Translate every candidate, continuing after safe failures with one fallback."""
     if not config.providers.enabled or not config.providers.network_egress_enabled:
         raise AutonomousPipelineError("automation translation requires both live provider gates")
     if not 1 <= max_workers <= 16:
@@ -1039,6 +1138,253 @@ def _read_live_results(path: Path) -> list[LiveEvaluationResult]:
     return results
 
 
+def _conclusion(
+    result: LiveEvaluationResult,
+) -> Literal["pass", "needs_human_review", "fail", "unavailable"]:
+    return result.verdict.conclusion if result.verdict is not None else "unavailable"
+
+
+def _is_sampled_pass(unit_id: str, pass_sample_basis_points: int) -> bool:
+    if not 0 <= pass_sample_basis_points <= 10_000:
+        raise AutonomousPipelineError("pass sample basis points must be between 0 and 10000")
+    bucket = int(sha256_bytes(unit_id.encode("utf-8"))[7:15], 16) % 10_000
+    return bucket < pass_sample_basis_points
+
+
+def _escalation_reason(
+    result: LiveEvaluationResult,
+    *,
+    pass_sample_basis_points: int,
+) -> Literal["mini_non_pass", "pass_sample"] | None:
+    conclusion = _conclusion(result)
+    if conclusion != "pass":
+        return "mini_non_pass"
+    return (
+        "pass_sample"
+        if _is_sampled_pass(result.evaluation_unit.unit_id, pass_sample_basis_points)
+        else None
+    )
+
+
+def prepare_strong_escalation_inputs(
+    evaluation_inputs_jsonl: Path,
+    mini_results_jsonl: Path,
+    output_root: Path,
+    *,
+    pass_sample_basis_points: int,
+) -> ContentManifest | None:
+    """Select mini non-passes and a deterministic sample of mini passes for GPT.
+
+    A mini ``pass`` outside the declared sample proceeds without a second model
+    call.  This is intentional cost control, recorded by the eventual
+    hierarchical consensus receipt rather than inferred from missing rows.
+    """
+    input_path = evaluation_inputs_jsonl.resolve(strict=True)
+    mini_path = mini_results_jsonl.resolve(strict=True)
+    root = output_root.resolve(strict=False)
+    if (
+        not input_path.is_file()
+        or input_path.suffix.lower() != ".jsonl"
+        or not mini_path.is_file()
+        or mini_path.suffix.lower() != ".jsonl"
+        or (output_root.exists() and not output_root.is_dir())
+    ):
+        raise AutonomousPipelineError("strong escalation input/output paths are invalid")
+    if _within(root, input_path.parent) or _within(root, mini_path.parent):
+        raise AutonomousPipelineError("strong escalation output root must be disjoint from inputs")
+    input_sha = sha256_bytes(input_path.read_bytes())
+    mini_sha = sha256_bytes(mini_path.read_bytes())
+    inputs = [
+        LiveEvaluationInput.model_validate_json(canonical_bytes(record), strict=True)
+        for record in iter_jsonl(input_path)
+    ]
+    inputs_by_unit = {item.evaluation_unit.unit_id: item for item in inputs}
+    mini_by_unit = {
+        result.evaluation_unit.unit_id: result for result in _read_live_results(mini_path)
+    }
+    if not inputs_by_unit or set(inputs_by_unit) != set(mini_by_unit):
+        raise AutonomousPipelineError("mini results must cover every evaluation input exactly")
+    selected = [
+        inputs_by_unit[unit_id]
+        for unit_id in sorted(inputs_by_unit)
+        if _escalation_reason(
+            mini_by_unit[unit_id], pass_sample_basis_points=pass_sample_basis_points
+        )
+        is not None
+    ]
+    if not selected:
+        return None
+    if (
+        sha256_bytes(input_path.read_bytes()) != input_sha
+        or sha256_bytes(mini_path.read_bytes()) != mini_sha
+    ):
+        raise AutonomousPipelineError("strong escalation input changed during preparation")
+    return publish_jsonl_artifact(
+        root,
+        logical_name="autonomous-strong-escalation-inputs",
+        schema_version="live-evaluation-input-0.1.0",
+        stage="autonomous-strong-escalation-inputs",
+        records=[item.model_dump(mode="json", exclude_none=False) for item in selected],
+        contract_hashes={
+            "evaluation_inputs": input_sha,
+            "mini_results": mini_sha,
+            "pass_sample_basis_points": sha256_bytes(f"{pass_sample_basis_points:04d}".encode()),
+        },
+    )
+
+
+def build_hierarchical_consensus(
+    mini_results_jsonl: Path,
+    strong_results_jsonl: Path | None,
+    output_root: Path,
+    *,
+    pass_sample_basis_points: int,
+) -> HierarchicalConsensusReport:
+    """Finalise mini-first decisions, using GPT only for declared escalations."""
+    mini_path = mini_results_jsonl.resolve(strict=True)
+    root = output_root.resolve(strict=False)
+    if (
+        not mini_path.is_file()
+        or mini_path.suffix.lower() != ".jsonl"
+        or (
+            strong_results_jsonl is not None
+            and not strong_results_jsonl.resolve(strict=True).is_file()
+        )
+        or (output_root.exists() and not output_root.is_dir())
+    ):
+        raise AutonomousPipelineError("hierarchical consensus input/output paths are invalid")
+    strong_path = strong_results_jsonl.resolve(strict=True) if strong_results_jsonl else None
+    paths = (mini_path,) if strong_path is None else (mini_path, strong_path)
+    if any(_within(root, path.parent) for path in paths):
+        raise AutonomousPipelineError(
+            "hierarchical consensus output root must be disjoint from inputs"
+        )
+    mini_sha = sha256_bytes(mini_path.read_bytes())
+    strong_sha = sha256_bytes(strong_path.read_bytes()) if strong_path is not None else None
+    mini_by_unit = {
+        result.evaluation_unit.unit_id: result for result in _read_live_results(mini_path)
+    }
+    if not mini_by_unit:
+        raise AutonomousPipelineError("hierarchical consensus requires mini results")
+    expected_escalations = {
+        unit_id
+        for unit_id, result in mini_by_unit.items()
+        if _escalation_reason(result, pass_sample_basis_points=pass_sample_basis_points) is not None
+    }
+    strong_by_unit = (
+        {result.evaluation_unit.unit_id: result for result in _read_live_results(strong_path)}
+        if strong_path is not None
+        else {}
+    )
+    if set(strong_by_unit) != expected_escalations:
+        raise AutonomousPipelineError("strong results must cover exactly the selected escalations")
+    decisions: list[HierarchicalConsensus] = []
+    for unit_id in sorted(mini_by_unit):
+        mini = mini_by_unit[unit_id]
+        reason = _escalation_reason(mini, pass_sample_basis_points=pass_sample_basis_points)
+        mini_conclusion = _conclusion(mini)
+        strong = strong_by_unit.get(unit_id)
+        if reason is None:
+            strong_conclusion = None
+            final_decider: Literal["mini", "strong"] = "mini"
+            final_conclusion: Literal["pass", "needs_human_review", "fail", "unavailable"] = "pass"
+            status: Literal["accepted_for_review_package", "needs_review"] = (
+                "accepted_for_review_package"
+            )
+        else:
+            if strong is None or strong.evaluation_unit != mini.evaluation_unit:
+                raise AutonomousPipelineError(
+                    "strong escalation result lost its exact evaluation unit"
+                )
+            strong_conclusion = _conclusion(strong)
+            final_decider = "strong"
+            final_conclusion = strong_conclusion
+            status = "accepted_for_review_package" if final_conclusion == "pass" else "needs_review"
+        body: dict[str, object] = {
+            "schema_version": "hierarchical-consensus-0.1.0",
+            "evaluation_unit": mini.evaluation_unit.model_dump(mode="json"),
+            "mini_result_id": mini.result_id,
+            "mini_verdict_id": mini.verdict.verdict_id if mini.verdict is not None else None,
+            "mini_conclusion": mini_conclusion,
+            "escalation_reason": reason,
+            "strong_result_id": strong.result_id if strong is not None else None,
+            "strong_verdict_id": strong.verdict.verdict_id
+            if strong is not None and strong.verdict is not None
+            else None,
+            "strong_conclusion": strong_conclusion,
+            "final_decider": final_decider,
+            "final_conclusion": final_conclusion,
+            "status": status,
+            "gold_eligible": False,
+        }
+        decisions.append(
+            HierarchicalConsensus(
+                consensus_id=stable_id("autohconsensus", body),
+                evaluation_unit=mini.evaluation_unit,
+                mini_result_id=mini.result_id,
+                mini_verdict_id=mini.verdict.verdict_id if mini.verdict is not None else None,
+                mini_conclusion=mini_conclusion,
+                escalation_reason=reason,
+                strong_result_id=strong.result_id if strong is not None else None,
+                strong_verdict_id=(
+                    strong.verdict.verdict_id
+                    if strong is not None and strong.verdict is not None
+                    else None
+                ),
+                strong_conclusion=strong_conclusion,
+                final_decider=final_decider,
+                final_conclusion=final_conclusion,
+                status=status,
+            )
+        )
+    if sha256_bytes(mini_path.read_bytes()) != mini_sha or (
+        strong_path is not None
+        and strong_sha is not None
+        and sha256_bytes(strong_path.read_bytes()) != strong_sha
+    ):
+        raise AutonomousPipelineError("hierarchical consensus input changed during execution")
+    manifest = publish_jsonl_artifact(
+        root / "consensus",
+        logical_name="autonomous-hierarchical-consensus",
+        schema_version="hierarchical-consensus-0.1.0",
+        stage="autonomous-hierarchical-consensus",
+        records=[item.model_dump(mode="json", exclude_none=False) for item in decisions],
+        contract_hashes={
+            "mini_results": mini_sha,
+            "strong_results": strong_sha or sha256_bytes(b"no-strong-escalations"),
+            "pass_sample_basis_points": sha256_bytes(f"{pass_sample_basis_points:04d}".encode()),
+        },
+    )
+    accepted = sum(item.status == "accepted_for_review_package" for item in decisions)
+    body = {
+        "schema_version": "hierarchical-consensus-report-0.1.0",
+        "mini_results_sha256": mini_sha,
+        "strong_results_sha256": strong_sha,
+        "pass_sample_basis_points": pass_sample_basis_points,
+        "requested_units": len(decisions),
+        "strong_escalated_units": len(expected_escalations),
+        "accepted_units": accepted,
+        "needs_review_units": len(decisions) - accepted,
+        "consensus_manifest_id": manifest.manifest_id,
+        "gold_release_allowed": False,
+    }
+    report = HierarchicalConsensusReport(
+        report_id=stable_id("autohconsreport", body),
+        mini_results_sha256=mini_sha,
+        strong_results_sha256=strong_sha,
+        pass_sample_basis_points=pass_sample_basis_points,
+        requested_units=len(decisions),
+        strong_escalated_units=len(expected_escalations),
+        accepted_units=accepted,
+        needs_review_units=len(decisions) - accepted,
+        consensus_manifest_id=manifest.manifest_id,
+    )
+    publish_bytes_atomic(
+        root / "reports" / f"{report.report_id}.json", canonical_bytes(report) + b"\n"
+    )
+    return report
+
+
 def build_automation_consensus(
     mini_results_jsonl: Path,
     strong_results_jsonl: Path,
@@ -1153,22 +1499,43 @@ def build_automation_consensus(
     return report
 
 
-def _read_consensus(path: Path) -> list[AutomationConsensus]:
-    decisions = [
-        AutomationConsensus.model_validate_json(canonical_bytes(record), strict=True)
-        for record in iter_jsonl(path)
-    ]
+def _accepted_consensus_unit_ids(path: Path) -> set[str]:
+    """Read either legacy two-judge or current hierarchical consensus safely."""
+    records = list(iter_jsonl(path))
+    try:
+        decisions: list[AutomationConsensus | HierarchicalConsensus] = [
+            AutomationConsensus.model_validate_json(canonical_bytes(record), strict=True)
+            for record in records
+        ]
+    except ValidationError as legacy_error:
+        try:
+            decisions = [
+                HierarchicalConsensus.model_validate_json(canonical_bytes(record), strict=True)
+                for record in records
+            ]
+        except ValidationError as hierarchy_error:
+            raise AutonomousPipelineError(
+                "consensus JSONL must use a supported strict consensus schema"
+            ) from hierarchy_error
+        if not decisions and records:
+            raise AutonomousPipelineError(
+                "hierarchical consensus JSONL is invalid"
+            ) from legacy_error
     unit_ids = [item.evaluation_unit.unit_id for item in decisions]
     if unit_ids != sorted(set(unit_ids)):
         raise AutonomousPipelineError(
             "consensus JSONL must be unique and sorted by evaluation unit"
         )
-    return decisions
+    return {
+        item.evaluation_unit.unit_id
+        for item in decisions
+        if item.status == "accepted_for_review_package"
+    }
 
 
-def _hf_row(episode: CanonicalEpisode) -> HuggingFaceDatasetRow:
+def _hf_row(episode: CanonicalEpisode) -> HierarchicalHuggingFaceDatasetRow:
     snapshots = sorted({source.snapshot_id for source in episode.provenance.sources})
-    return HuggingFaceDatasetRow(
+    return HierarchicalHuggingFaceDatasetRow(
         id=episode.episode_id,
         messages=episode.conversation,
         tools=episode.tools,
@@ -1191,7 +1558,7 @@ def _dataset_card(*, package: HuggingFaceReviewPackage, namespaces: list[str]) -
         "    path: data/train.jsonl\n"
         "---\n\n"
         "# Turkish Tool Calling review candidate\n\n"
-        "This package is a local, two-judge-passing silver candidate and remains "
+        "This package is a local, quality-evaluated silver candidate and remains "
         "pending explicit human approval. It must not be published as Gold without "
         "that approval.\n\n"
         f"- Review-ready records: {package.review_ready_records}\n"
@@ -1203,10 +1570,10 @@ def _dataset_card(*, package: HuggingFaceReviewPackage, namespaces: list[str]) -
     return text.encode("utf-8")
 
 
-def _validate_huggingface_rows(rows: Iterable[HuggingFaceDatasetRow]) -> None:
+def _validate_huggingface_rows(rows: Iterable[HierarchicalHuggingFaceDatasetRow]) -> None:
     """Round-trip each rendered JSONL row through the strict public wire contract."""
     for row in rows:
-        HuggingFaceDatasetRow.model_validate_json(canonical_bytes(row), strict=True)
+        HierarchicalHuggingFaceDatasetRow.model_validate_json(canonical_bytes(row), strict=True)
 
 
 def build_huggingface_review_package(
@@ -1244,10 +1611,8 @@ def build_huggingface_review_package(
         raise AutonomousPipelineError(
             "HF package results must cover exactly the candidate episodes"
         )
-    consensus_by_unit = {
-        item.evaluation_unit.unit_id: item for item in _read_consensus(consensus_path)
-    }
-    accepted: list[HuggingFaceDatasetRow] = []
+    accepted_consensus_unit_ids = _accepted_consensus_unit_ids(consensus_path)
+    accepted: list[HierarchicalHuggingFaceDatasetRow] = []
     for episode_id in sorted(episode_by_id):
         episode = episode_by_id[episode_id]
         result = results_by_id[episode_id]
@@ -1272,11 +1637,7 @@ def build_huggingface_review_package(
             expected_units.append(unit.unit_id)
         if not expected_units:
             raise AutonomousPipelineError("review package episode has no translatable segments")
-        if all(
-            consensus_by_unit.get(unit_id) is not None
-            and consensus_by_unit[unit_id].status == "accepted_for_review_package"
-            for unit_id in expected_units
-        ):
+        if all(unit_id in accepted_consensus_unit_ids for unit_id in expected_units):
             accepted.append(_hf_row(translated))
     ordered_rows = sorted(accepted, key=lambda item: item.id)
     _validate_huggingface_rows(ordered_rows)

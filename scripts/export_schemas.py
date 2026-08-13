@@ -16,6 +16,9 @@ from toolcall_tr.autonomous_pipeline import (
     AutomationEpisodeResult,
     AutomationRoute,
     AutomationTranslationReport,
+    HierarchicalConsensus,
+    HierarchicalConsensusReport,
+    HierarchicalHuggingFaceDatasetRow,
     HuggingFaceDatasetRow,
     HuggingFaceReviewPackage,
 )
@@ -70,6 +73,7 @@ from toolcall_tr.provider_provenance import (
     ProviderAttemptRecord,
     RetryBudgetClassification,
 )
+from toolcall_tr.provider_usage import ProviderUsageRecord
 from toolcall_tr.release_contract import (
     ReleaseDatasetFile,
     ReleaseGoldMember,
@@ -123,6 +127,8 @@ MODELS = {
     "autonomous-candidate-member.schema.json": AutomationCandidateMember,
     "autonomous-consensus.schema.json": AutomationConsensus,
     "autonomous-consensus-report.schema.json": AutomationConsensusReport,
+    "hierarchical-consensus.schema.json": HierarchicalConsensus,
+    "hierarchical-consensus-report.schema.json": HierarchicalConsensusReport,
     "autonomous-route.schema.json": AutomationRoute,
     "autonomous-translation-result.schema.json": AutomationEpisodeResult,
     "autonomous-translation.schema.json": AutomationTranslationReport,
@@ -145,6 +151,7 @@ MODELS = {
     "human-evaluation-review.schema.json": HumanEvaluationReview,
     "human-evaluation-review-entry.schema.json": HumanEvaluationReviewEntry,
     "hf-dataset-row.schema.json": HuggingFaceDatasetRow,
+    "hf-dataset-row-0.1.1.schema.json": HierarchicalHuggingFaceDatasetRow,
     "hf-review-package.schema.json": HuggingFaceReviewPackage,
     "model-evaluation-verdict.schema.json": ModelEvaluationVerdict,
     "mqm-finding.schema.json": MqmFinding,
@@ -206,6 +213,7 @@ MODELS = {
     "openai-judge-finding-output.schema.json": JudgeFindingOutput,
     "openai-judge-output.schema.json": JudgeOutput,
     "provider-attempt-record.schema.json": ProviderAttemptRecord,
+    "provider-usage-record.schema.json": ProviderUsageRecord,
     "retry-budget-classification.schema.json": RetryBudgetClassification,
     "terminology-input.schema.json": TerminologyInput,
     "terminology-risk.schema.json": TerminologyRisk,

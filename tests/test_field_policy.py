@@ -40,6 +40,8 @@ def test_checked_in_field_policy_translates_documentation_but_copies_all_argumen
     field_policy = load_field_policy(root / "configs" / "field_policy.toml")
     assert field_policy.tool_description_action is FieldAction.TRANSLATE
     assert field_policy.parameter_description_action is FieldAction.TRANSLATE
+    assert field_policy.argument_action("qrcode", "/data") is FieldAction.COPY_EXACT
+    assert field_policy.argument_action("reverse_input", "/input_value") is FieldAction.COPY_EXACT
     assert field_policy.argument_action("any_tool", "/any/nested/path") is FieldAction.COPY_EXACT
 
 

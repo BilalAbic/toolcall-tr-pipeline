@@ -19,15 +19,21 @@ model = "deepseek-v4-flash"
 api_key_env = "DEEPSEEK_API_KEY"
 temperature = 0.0
 thinking = false
+max_workers = 6
+daily_token_budget = 12000000
 
 [providers.strong_judge]
 provider = "openai"
 endpoint = "https://api.openai.com/v1/responses"
 model = "gpt-5.4"
 api_key_env = "OPENAI_API_KEY"
+max_workers = 2
+daily_token_budget = 225000
 
 [providers.mini_verifier]
 provider = "openai"
 endpoint = "https://api.openai.com/v1/responses"
 model = "gpt-5.4-mini"
 api_key_env = "OPENAI_API_KEY"
+max_workers = 4
+daily_token_budget = 1800000

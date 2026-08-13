@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Receipt for one mini-first, selectively escalated quality decision set.",
+  "properties": {
+    "accepted_units": {
+      "minimum": 0,
+      "title": "Accepted Units",
+      "type": "integer"
+    },
+    "consensus_manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Consensus Manifest Id",
+      "type": "string"
+    },
+    "gold_release_allowed": {
+      "const": false,
+      "default": false,
+      "title": "Gold Release Allowed",
+      "type": "boolean"
+    },
+    "mini_results_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Mini Results Sha256",
+      "type": "string"
+    },
+    "needs_review_units": {
+      "minimum": 0,
+      "title": "Needs Review Units",
+      "type": "integer"
+    },
+    "pass_sample_basis_points": {
+      "maximum": 10000,
+      "minimum": 0,
+      "title": "Pass Sample Basis Points",
+      "type": "integer"
+    },
+    "report_id": {
+      "pattern": "^autohconsreport_[0-9a-f]{64}$",
+      "title": "Report Id",
+      "type": "string"
+    },
+    "requested_units": {
+      "exclusiveMinimum": 0,
+      "title": "Requested Units",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "hierarchical-consensus-report-0.1.0",
+      "default": "hierarchical-consensus-report-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "strong_escalated_units": {
+      "minimum": 0,
+      "title": "Strong Escalated Units",
+      "type": "integer"
+    },
+    "strong_results_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Strong Results Sha256"
+    }
+  },
+  "required": [
+    "report_id",
+    "mini_results_sha256",
+    "strong_results_sha256",
+    "pass_sample_basis_points",
+    "requested_units",
+    "strong_escalated_units",
+    "accepted_units",
+    "needs_review_units",
+    "consensus_manifest_id"
+  ],
+  "title": "HierarchicalConsensusReport",
+  "type": "object"
+}

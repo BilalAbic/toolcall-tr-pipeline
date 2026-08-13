@@ -2,7 +2,7 @@
 
 Bu belge, planın en kritik arıza biçimlerini görünür tutar ve bir sonraki faza geçmeden önce kontrol edilecek kısa listeleri tanımlar. Ayrıntılı süreçleri tekrar etmez; `02-data-pipeline.md` ve `04-implementation-plan.md` kapılarına bağlanır.
 
-Güncel karar: **Faz 1–5 temel, sınırlı canlı provider yüzeyi, iki gerçek kaynağın modelsiz pilotu, karar üretmeyen insan-review worklist'i ve en çok 30 episode'luk pre-review canary yüzeyi hazırdır; bu insan review kararı veya release'e geçiş onayı değildir.** Pre-review canary, teknik/prompt/provider testini insan kabulundan önce yapabilir; insan review S400/Gold/release için son karar kapısıdır. Varsayılan config çevrimdışıdır; canlı komutlar explicit `--live`, non-default config, preflight ve disjoint output gerektirir. Aşağıdaki listelerde test/model kanıtı, modelsiz gerçek kaynak kanıtı ve henüz açık üretim koşulları ayrılır.
+Güncel karar: **Faz 1–5 temel, sınırlı canlı provider yüzeyi, iki gerçek kaynağın modelsiz pilotu, karar üretmeyen insan-review worklist'i, pre-review canary ve 50-episode bounded automation regression'ı hazırdır; bu insan review kararı veya release'e geçiş onayı değildir.** Güncel v0.3 / Flash 6-worker regression 46 translation, 541 accepted leaf ve 40 pending-HF review row üretti; aktif v0.4 prompt ayrı immutable batch'te ölçülecektir. Pre-review canary, teknik/prompt/provider testini insan kabulundan önce yapabilir; insan review S400/Gold/release için son karar kapısıdır. Varsayılan config çevrimdışıdır; canlı komutlar explicit `--live`, non-default config, preflight ve disjoint output gerektirir. Aşağıdaki listelerde test/model kanıtı, modelsiz gerçek kaynak kanıtı ve henüz açık üretim koşulları ayrılır.
 
 ## 1. Öncelikli risk kaydı
 

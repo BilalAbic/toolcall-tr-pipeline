@@ -108,6 +108,10 @@ def test_openai_judge_uses_all_required_strict_schema_and_maps_a_pass() -> None:
     body = json.loads(raw)
     assert body["store"] is False
     assert body["text"]["format"]["strict"] is True
+    system_text = body["input"][0]["content"][0]["text"]
+    assert "A pass requires findings=[]" in system_text
+    assert "contiguous source and target excerpts verbatim" in system_text
+    assert "Do not invent excerpts" in system_text
     schema = body["text"]["format"]["schema"]
     assert set(schema["required"]) == set(schema["properties"])
     finding = schema["$defs"]["JudgeFindingOutput"]

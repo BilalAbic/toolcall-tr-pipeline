@@ -13,7 +13,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `secure_transport.py` yalnız public HTTPS, no-proxy/no-redirect, bounded response ve redacted hata yüzeyiyle çalışır. `credentials.py` yalnız allow-list'li provider anahtarını `.env` veya process environment'tan çözer; anahtar loglanmaz.
 - `deepseek_adapter.py` yalnız `https://api.deepseek.com/chat/completions` ve V4 modellerini; `openai_judge.py` yalnız `https://api.openai.com/v1/responses` ile belirtilen judge modellerini kabul eder.
 - `live_preflight.py` secret/PII/local-path/private endpoint bulgularını transport öncesi reddeder. Varsayılan pipeline config yine çevrimdışıdır.
-- Varsayılan configte provider/eval kapalıdır. `translate`, `evaluation run` ve `automation run` yalnız explicit `--live`, non-default config, disjoint output root ve preflight ile çalışır. `automation run` birincil Flash route’u, safe terminal failure’da tek Pro fallback’i ve iki bağımsız judge consensus’unu uygular; teslimatı belirsiz ağ hatasını tekrar göndermez. Review/release son kabulda yalnız haricî insan kararlarını doğrular.
+- Varsayılan configte provider/eval kapalıdır. `translate`, `evaluation run` ve `automation run` yalnız explicit `--live`, non-default config, disjoint output root ve preflight ile çalışır. `automation run` birincil Flash route’u, safe terminal failure’da tek Pro fallback’i, tüm leaf’lerde mini judge ve mini non-pass + deterministik pass örnekleminde güçlü-judge escalation uygular; teslimatı belirsiz ağ hatasını tekrar göndermez. Review/release son kabulda yalnız haricî insan kararlarını doğrular.
 - Testler `tests/fixtures/` altındaki küçük sentetik JSONL dosyalarını ve pytest geçici dizinlerini kullanır.
 - Gerçek kaynak snapshot/pilot artifactı yalnız yerel ve ignore edilmiş artifact kökü altında üretildi; kaynak değiştirilmedi. 2026-08-13 bounded automation koşusunda conflict-free 50 canonical adayın policy-izinli leaf'leri explicit provider egress’iyle işlendi; artefact yalnız `pending_human_approval` HF review paketi üretir. Gerçek insan kararı, S30/S400 seçimi, Gold veya publish artifactı üretilmemiştir.
 
@@ -23,7 +23,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 |---|---|---|---|
 | Proje iskeleti ve kilitli ortam | Uygulandı | `pyproject.toml`, `uv.lock`, `src/toolcall_tr/`, `tests/` | Python 3.12, `uv`, pytest/Hypothesis, Ruff ve Pyright yapılandırması |
 | Strict sözleşmeler | Uygulandı | `src/toolcall_tr/models.py`, `source.py`, `artifacts.py`, `events.py`, `diagnostics.py` | Pydantic strict/frozen, extra alan reddi, role/call/state doğrulaması |
-| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Doksan dört immutable versioned artifact; dialect ve meta-schema kontrolü |
+| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Doksan sekiz immutable versioned artifact; dialect ve meta-schema kontrolü |
 | Diagnostic catalog | Uygulandı | `src/toolcall_tr/data/diagnostic_catalog.json` | Bilinen kodların anlamı catalogdan gelir; bilinmeyen kod fail-closed |
 | Canonical JSON/hash/ID | Uygulandı | `src/toolcall_tr/hashing.py`, `ids.py` | RFC 8785/JCS, SHA-256, key-order invariance, non-finite sayı reddi |
 | Artifact manifesti | Uygulandı | `src/toolcall_tr/artifacts.py`, `shards.py` | Content-addressed isim, dengeli row accounting, validate-before-publish, overwrite yasağı, idempotent resume |
@@ -40,7 +40,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 | Near duplicate ve split guard | Fixture düzeyinde uygulandı | `similarity.py`, `split_guard.py`, `audit near-duplicates` CLI | N-gram/Jaccard yalnız review adayı üretir; component farklı splitlerdeyse fail-closed |
 | Selection freeze | Fixture düzeyinde uygulandı | `selection.py`, `phase4_config.py`, `select freeze` CLI | Human-adjudicated `source_valid`, grounding/conflict filtreleri, deterministic reserve queue ve strict S30/S100/S250/S400 prefixes; gerçek membership yok |
 | Temel CLI | Uygulandı | `cli.py` | Register/validate/ingest/registry/canonicalize/source evidence/audit/select freeze/inspect/stats/events/diagnostics |
-| Faz 5 field policy ve host merge | Uygulandı, gerçek canonical coverage ile | `field_policy.py`, `configs/field_policy.toml` | Tool/parameter açıklamaları `translate`; tüm adı geçmeyen argumentlar gözden geçirilmiş global `copy_exact` fallback ile modele kapalıdır. When2Call+xLAM 85.111 canonical episode üzerinde 849.064 segment / 0 unresolved policy error ağsız doğrulandı; technical fields immutable, coverage/merge fail-closed. |
+| Faz 5 field policy ve host merge | Uygulandı, gerçek canonical coverage ile | `field_policy.py`, `configs/field_policy.toml` | Tool/parameter açıklamaları `translate`; tüm argumentlar gözden geçirilmiş global `copy_exact` fallback ile modele kapalıdır. Canlı 50’lik örnekte doğal dil gibi görünen iki argument yolu, çok-türlü şema veya identifier değer nedeniyle istisna almamıştır. When2Call+xLAM 85.111 canonical episode üzerinde 849.064 segment / 0 unresolved policy error ağsız doğrulandı; technical fields immutable, coverage/merge fail-closed. |
 | Faz 5 translation wire contract | Fixture düzeyinde uygulandı | `translation_contract.py` | Provider-shaped request/response yalnız local schema, sentinel order, NFC ve exact coverage için doğrulanır; istemci yok |
 | Faz 5 pre-egress güvenlik | Fixture düzeyinde uygulandı | `egress_guard.py` | Secret/PII/local-path/private endpoint scan; offline configte clean payload dahi bloklu; HTTP/DNS/SDK yok |
 | Faz 5 eval sözleşmesi | Fixture düzeyinde uygulandı | `eval_contract.py` | Atomic MQM finding + segment/path evidence, stdlib Wilson %95 coverage, deterministic rapor ve human-only gold eligibility |
@@ -50,16 +50,17 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 | Canlı provider smoke | Uygulandı, sentetik sınırda | `secure_transport.py`, `credentials.py`, `deepseek_adapter.py`, `openai_judge.py`, `live_preflight.py`, `provider smoke` CLI | DeepSeek V4 çeviri ve OpenAI GPT-5.4-mini judge için gerçek endpoint smoke'u geçti; sabit sentetik içerik, explicit live config, endpoint allow-list, preflight ve local strict validation. Gerçek kaynak satırı bu endpointlere gönderilmedi. |
 | Operasyonel kaynak pilotu | Uygulandı, gerçek kaynak kanıtıyla | `src/toolcall_tr/pilot.py`, `pilot run` CLI | When2Call revision `0582f…ace53`, tüm splitler: 27.952 satır / 27.393 canonical / 559 karantina / 136 cross-split conflict. Training için source-explicit `<TOOLCALL>`, açık clarification ve açık tool-unavailable hedefleri alınır. xLAM 60k revision `26d14e…7866`: 57.718 canonical / 2.282 karantina / 6 hard-conflict. Kaynak yeniden hash'lendi; model/provider çağrısı yok. |
 | Pre-review canary | Uygulandı, sınırlı gerçek kaynak canlı kanıtıyla | `pre_review_canary.py`, `canary prepare`, `canary evaluation-inputs` | En çok 30 episode; yalnız source-explicit, policy-covered, conflict-free ve exact-alias dışı kayıtlar. When2Call'da 3 episode / 20 leaf `translation-prompt-0.2.0` ile DeepSeek V4 Flash'ta çevrildi; GPT-5.4-mini 20/20 `pass`, 0 finding. Her çıktı `promotion=not_eligible`, `gold_release_allowed=false`; insan kabulunu ikame etmez. |
-| Bounded otomasyon ve HF review paketi | Uygulandı, 50 gerçek canonical adayda canlı kanıtla | `autonomous_pipeline.py`, `automation run` CLI | Deterministik source-explicit, conflict-free/alias-dışı cohort; DeepSeek Flash → safe failure’da tek Pro fallback; unknown delivery yeniden gönderilmez; 4 eşzamanlı worker, host merge, mini+strong judge consensus ve strict `data/train.jsonl` paketi. 50 adaydan 46 çevrildi, 456 leaf iki-judge pass, 12 `silver_candidate` episode `pending_human_approval` HF paketine girdi; Gold/publish kapalı. |
+| Bounded otomasyon ve HF review paketi | Uygulandı, 50 gerçek canonical adayda seçici-escalation canlı kanıtıyla | `autonomous_pipeline.py`, `automation run` CLI | Deterministik source-explicit, conflict-free/alias-dışı cohort; DeepSeek Flash → safe failure’da tek Pro fallback; unknown delivery yeniden gönderilmez; host merge sonrası mini judge tüm leaf’leri değerlendirir. Mini non-pass ve deterministik mini-pass örneklemi güçlü judge’a gider; örneklem dışı mini `pass` yeterlidir. Güncel `when2call-xlam-50-prompt-v3-workers6-20260813` koşusunda 50 adayın 46’sı çevrildi, 547 leaf’in 541’i kabul edildi, 6 leaf `needs_review` kaldı ve 40 `silver_candidate` episode pakete girdi; tahmini maliyet `$0.556529`. Gold/publish kapalı. |
 | İnsan review kuyruğu | Uygulandı, gerçek karar bekliyor | `review_queue.py`, `review prepare` CLI | Immutable karantina/audit kanıtları sıralı human-only görevlere dönüşür; 2026-08-13 yerel kuyruğu 2.841 karantina + 142 conflict görevi taşır (`manifest_a523…c8d`). Karar, drop veya kaynak değişikliği üretmez. |
 | İnsan review ve Gold release | Uygulandı, gerçek karar bekliyor | `human_review_log.py`, `review submit-*`, `release build/validate` | Haricî tek-kayıt reviewer JSONL strict doğrulanır ve hash zincirine append edilir. Release her satır için local verdict, açık human acceptance ve linked review ID olmadan oluşmaz. |
 | Provider attempt provenance | Uygulandı | `provider_provenance.py`, canlı adapterlar | Ham içerik veya credential saklamayan hash-only attempt kaydı; temel adapter route’u otomatik retry bütçesi 0. Automation orchestrator bu immutable receiptleri kullanarak yalnız safe sınıflarda tek farklı-model fallback yapar. |
+| Provider token/maliyet kanıtı | Uygulandı | `provider_usage.py`, canlı CLI | Sağlayıcının verdiği input/cache/output sayaçları hash-bağlı sidecar'a yazılır; CLI model başına istek/token/tahmini USD maliyetini gösterir. Ham içerik/anahtar tutulmaz. |
 | Operasyonel canlı çeviri | Uygulandı, bounded automation ile | `src/toolcall_tr/operational_translation.py`, `translate` CLI | Yalnız field-policy tarafından izinli leaf'ler DeepSeek'e gider; source rehash ve host merge zorunlu. `automation run`, episode hata izolasyonu, checkpoint/resume, safe Flash → Pro fallback ve 1–16 worker ile bunu cohort seviyesine taşır. Gold/release yok. |
-| Operasyonel canlı judge | Uygulandı, bounded automation ile | `src/toolcall_tr/live_evaluation.py`, `evaluation run` CLI | Tam-leaf hash'li source/target input, role-specific OpenAI judge, immutable attempt/result/report artifactları. `automation run` mini ve strong judge’ı aynı leaf membershipinde çalıştırır; yalnız iki `pass` review package’a girer, `gold_release_allowed=false` kalır. |
+| Operasyonel canlı judge | Uygulandı, bounded automation ile | `src/toolcall_tr/live_evaluation.py`, `evaluation run` CLI | Tam-leaf hash'li source/target input, role-specific OpenAI judge, immutable attempt/result/report artifactları. `automation run` mini judge’ı her leaf’te çalıştırır; mini non-pass ve deterministik pass örneklemi güçlü judge’a gider. Escalation’daki güçlü karar, örneklem dışındaki mini `pass` ise tek başına review-package kabulünü belirler; `gold_release_allowed=false` kalır. |
 | Faz 6–7 render/loss-mask | Sözleşme kodu mevcut | `src/toolcall_tr/render_contract.py` | Enjekte edilmiş renderer/tokenizer, pinli config, teknik yapı ve final assistant payload eşleşmesi, tek target span ve truncation/offset uyuşmazlığında ret; model hub, chat-template/tokenizer indirme veya render CLI yok |
 | HF review package | Uygulandı, publish kapalı | `autonomous_pipeline.py`, `automation run` CLI | `messages` + `tools` içeren strict `data/train.jsonl`, `dataset_info.json`, Dataset Card ve hashli manifest üretir. Paket `silver_candidate`, `pending_human_approval`, `publish_allowed=false` olur; upload/publish komutu yoktur. |
 | Release manifest (Gold JSONL) | Fixture düzeyinde uygulandı | `release_contract.py`, `test_release_contract.py` | Sıralı yerel JSONL dosyalarının byte hash/row count doğrulaması, episode sırası ve açık human-review ID ile Gold üyeliği; gerçek Gold release veya Hugging Face publish yok |
-| Research/memory/repair | Kısmen uygulandı | Faz 5+ | Prompt, provider adapter, live translation/judge batch ve bounded fallback sözleşmeleri vardır. Research fetch ve automated repair yok. |
+| Research/memory/repair | Kısmen uygulandı | Faz 5+ | Research fetch yoktur. DeepSeek Pro yalnız Flash’ın güvenli üretim/politika fallback’idir; evaluator sonucu çeviriyi yeniden tetiklemez. Mini non-pass güçlü judge’a escalation olur; güçlü `needs_human_review`/ulaşılamaz sonuç tekrar gönderilmez. |
 | Pilot ve insan review çalıştırması | Kısmen uygulandı | Faz 6–8 | When2Call'ın tüm erişilebilir splitleri ve xLAM 60k üzerinde fail-closed modelsiz pilot tamamlandı. S30/S100/S250/S400 için yeterli ve yetkili insan review/adjudication yapılmadı; Gold kapalıdır. |
 | Yayınlama/HF/Parquet | Kısmen uygulandı | Faz 9 | Upload-ready JSONL review package ve Dataset Card vardır; explicit insan onayı, Gold membership, Parquet round-trip ve Hugging Face publish komutu yok |
 
@@ -77,6 +78,8 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `autonomous-translation.schema.json`
 - `autonomous-consensus.schema.json`
 - `autonomous-consensus-report.schema.json`
+- `hierarchical-consensus.schema.json`
+- `hierarchical-consensus-report.schema.json`
 - `argument-path-policy.schema.json`
 - `conflict-adjudication.schema.json`
 - `conflict-candidate.schema.json`
@@ -96,6 +99,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `human-evaluation-review.schema.json`
 - `human-evaluation-review-entry.schema.json`
 - `hf-dataset-row.schema.json`
+- `hf-dataset-row-0.1.1.schema.json`
 - `hf-review-package.schema.json`
 - `leaf-translation-record.schema.json`
 - `live-evaluation-input.schema.json`
@@ -120,6 +124,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `pre-egress-decision.schema.json`
 - `protected-token.schema.json`
 - `provider-attempt-record.schema.json`
+- `provider-usage-record.schema.json`
 - `research-budget.schema.json`
 - `research-candidate.schema.json`
 - `research-request.schema.json`

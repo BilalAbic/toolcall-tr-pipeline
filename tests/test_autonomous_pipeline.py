@@ -10,9 +10,11 @@ from tests.test_provider_adapter import config as base_config
 from toolcall_tr.audit import audit_exact_conflicts
 from toolcall_tr.autonomous_pipeline import (
     build_automation_consensus,
+    build_hierarchical_consensus,
     build_huggingface_review_package,
     prepare_automation_candidates,
     prepare_automation_evaluation_inputs,
+    prepare_strong_escalation_inputs,
     read_automation_results,
     run_automation_translation,
 )
@@ -109,6 +111,54 @@ class JudgeTransport:
                                 "type": "output_text",
                                 "text": (
                                     '{"conclusion":"pass","findings":[],"unresolved_reasons":[]}'
+                                ),
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+
+@dataclass
+class FailingJudgeTransport:
+    calls: int = 0
+
+    def create_response(self, *, endpoint: str, request_body: bytes) -> bytes:
+        self.calls += 1
+        body = cast(dict[str, JsonValue], json.loads(request_body))
+        user_input = body["input"]
+        assert isinstance(user_input, list) and isinstance(user_input[1], dict)
+        content = user_input[1]["content"]
+        assert isinstance(content, list) and isinstance(content[0], dict)
+        evidence = cast(dict[str, JsonValue], json.loads(cast(str, content[0]["text"])))
+        target = evidence["evidence"]
+        assert isinstance(target, dict)
+        return canonical_bytes(
+            {
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "message",
+                        "content": [
+                            {
+                                "type": "output_text",
+                                "text": json.dumps(
+                                    {
+                                        "conclusion": "fail",
+                                        "findings": [
+                                            {
+                                                "category": "accuracy.mistranslation",
+                                                "severity": "minor",
+                                                "source_excerpt": target["source_excerpt"],
+                                                "target_excerpt": target["target_excerpt"],
+                                                "rationale": "synthetic actionable failure",
+                                            }
+                                        ],
+                                        "unresolved_reasons": [],
+                                    },
+                                    ensure_ascii=False,
+                                    separators=(",", ":"),
                                 ),
                             }
                         ],
@@ -301,6 +351,150 @@ def test_automation_does_not_resend_after_unknown_delivery_and_continues(tmp_pat
     results_path = next((tmp_path / "translation" / "translation-results").glob("*.jsonl"))
     results = read_automation_results(results_path)
     assert all(result.routes[0].failure_code == "network_delivery_unknown" for result in results)
+
+
+def test_hierarchical_consensus_escalates_mini_non_passes_without_retranslation(
+    tmp_path: Path,
+) -> None:
+    candidate_path, _ = _prepare_candidates(tmp_path)
+    policy = load_field_policy(ROOT / "configs" / "field_policy.toml")
+    prompt = load_prompt_bundle(ROOT / "configs" / "prompt_bundle.toml")
+    translation_root = tmp_path / "translation"
+    translation = run_automation_translation(
+        candidate_path,
+        translation_root,
+        config=_live_config(),
+        field_policy=policy,
+        prompt=prompt,
+        transport=TranslationTransport(),
+    )
+    translation_jsonl = next((translation_root / "translation-results").glob("*.jsonl"))
+    inputs_root = tmp_path / "inputs"
+    inputs = prepare_automation_evaluation_inputs(
+        candidate_path,
+        translation_jsonl,
+        inputs_root,
+        field_policy=policy,
+    )
+    inputs_jsonl = inputs_root / inputs.artifacts[0].relative_path
+
+    def factory(role_name: str, transport: JudgeTransport | FailingJudgeTransport):
+        def build(attempt_sink: ProviderAttemptSink) -> OpenAIResponsesJudge:
+            return OpenAIResponsesJudge(
+                config=_live_config(),
+                role_name=role_name,
+                transport=transport,
+                attempt_sink=attempt_sink,
+            )
+
+        return build
+
+    mini = run_live_evaluation(
+        inputs_jsonl,
+        tmp_path / "mini",
+        config=_live_config(),
+        role_name="mini_verifier",
+        run_id="mini-fails",
+        judge_factory=factory("mini_verifier", FailingJudgeTransport()),
+    )
+    mini_jsonl = tmp_path / "mini" / "results" / mini.results_manifest.artifacts[0].relative_path
+    escalation = prepare_strong_escalation_inputs(
+        inputs_jsonl,
+        mini_jsonl,
+        tmp_path / "strong-inputs",
+        pass_sample_basis_points=0,
+    )
+    assert escalation is not None
+    escalation_jsonl = tmp_path / "strong-inputs" / escalation.artifacts[0].relative_path
+    assert escalation.artifacts[0].row_count == inputs.artifacts[0].row_count
+    strong = run_live_evaluation(
+        escalation_jsonl,
+        tmp_path / "strong",
+        config=_live_config(),
+        role_name="strong_judge",
+        run_id="strong-final",
+        judge_factory=factory("strong_judge", JudgeTransport()),
+    )
+    strong_jsonl = (
+        tmp_path / "strong" / "results" / strong.results_manifest.artifacts[0].relative_path
+    )
+    consensus = build_hierarchical_consensus(
+        mini_jsonl,
+        strong_jsonl,
+        tmp_path / "consensus",
+        pass_sample_basis_points=0,
+    )
+    assert translation.fallback_routes == 0
+    assert consensus.strong_escalated_units == inputs.artifacts[0].row_count
+    assert consensus.accepted_units == inputs.artifacts[0].row_count
+    consensus_jsonl = next((tmp_path / "consensus" / "consensus").glob("*.jsonl"))
+    package = build_huggingface_review_package(
+        candidate_path,
+        translation_jsonl,
+        consensus_jsonl,
+        tmp_path / "hf-package",
+        field_policy=policy,
+    )
+    assert package.review_ready_records == 2
+
+
+def test_hierarchical_consensus_accepts_unsampled_mini_passes(tmp_path: Path) -> None:
+    candidate_path, _ = _prepare_candidates(tmp_path)
+    policy = load_field_policy(ROOT / "configs" / "field_policy.toml")
+    prompt = load_prompt_bundle(ROOT / "configs" / "prompt_bundle.toml")
+    translation_root = tmp_path / "translation"
+    translation = run_automation_translation(
+        candidate_path,
+        translation_root,
+        config=_live_config(),
+        field_policy=policy,
+        prompt=prompt,
+        transport=TranslationTransport(),
+    )
+    translation_jsonl = next((translation_root / "translation-results").glob("*.jsonl"))
+    inputs = prepare_automation_evaluation_inputs(
+        candidate_path,
+        translation_jsonl,
+        tmp_path / "inputs",
+        field_policy=policy,
+    )
+    inputs_jsonl = tmp_path / "inputs" / inputs.artifacts[0].relative_path
+
+    def factory(attempt_sink: ProviderAttemptSink) -> OpenAIResponsesJudge:
+        return OpenAIResponsesJudge(
+            config=_live_config(),
+            role_name="mini_verifier",
+            transport=JudgeTransport(),
+            attempt_sink=attempt_sink,
+        )
+
+    mini = run_live_evaluation(
+        inputs_jsonl,
+        tmp_path / "mini",
+        config=_live_config(),
+        role_name="mini_verifier",
+        run_id="mini-passes",
+        judge_factory=factory,
+    )
+    mini_jsonl = tmp_path / "mini" / "results" / mini.results_manifest.artifacts[0].relative_path
+    assert (
+        prepare_strong_escalation_inputs(
+            inputs_jsonl,
+            mini_jsonl,
+            tmp_path / "strong-inputs",
+            pass_sample_basis_points=0,
+        )
+        is None
+    )
+    consensus = build_hierarchical_consensus(
+        mini_jsonl,
+        None,
+        tmp_path / "consensus",
+        pass_sample_basis_points=0,
+    )
+    assert translation.translated_records == 2
+    assert consensus.strong_escalated_units == 0
+    assert consensus.accepted_units == inputs.artifacts[0].row_count
 
 
 def test_hf_package_requires_consensus_for_every_translated_leaf(tmp_path: Path) -> None:

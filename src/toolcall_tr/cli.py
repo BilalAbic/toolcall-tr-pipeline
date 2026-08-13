@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -17,10 +18,11 @@ from toolcall_tr.artifacts import ContentManifest, publish_bytes_atomic, publish
 from toolcall_tr.audit import ExactConflictAudit, audit_exact_conflicts
 from toolcall_tr.autonomous_pipeline import (
     AutonomousPipelineError,
-    build_automation_consensus,
+    build_hierarchical_consensus,
     build_huggingface_review_package,
     prepare_automation_candidates,
     prepare_automation_evaluation_inputs,
+    prepare_strong_escalation_inputs,
     run_automation_translation,
 )
 from toolcall_tr.canonicalize import canonicalize as canonicalize_record
@@ -67,6 +69,13 @@ from toolcall_tr.pre_review_canary import (
 from toolcall_tr.prompt_contract import load_prompt_bundle
 from toolcall_tr.provider_adapter import ProviderAdapterError
 from toolcall_tr.provider_provenance import ProviderAttemptSink
+from toolcall_tr.provider_usage import (
+    ProviderUsageRecord,
+    ProviderUsageSinkError,
+    cost_lines,
+    estimated_total_usd,
+    format_usd,
+)
 from toolcall_tr.release_contract import (
     ReleaseGoldMember,
     build_release_manifest,
@@ -106,7 +115,7 @@ pilot_app = typer.Typer(help="Fail-closed, provider-free operational pilot comma
 evaluation_app = typer.Typer(help="Explicit, human-gated live OpenAI evaluation commands.")
 canary_app = typer.Typer(help="Bounded pre-review prompt and provider canary commands.")
 automation_app = typer.Typer(
-    help="Bounded, resumable live candidate automation with fallback and two-judge consensus."
+    help="Bounded, resumable live automation with safe fallback and selective strong escalation."
 )
 
 app.add_typer(source_app, name="source")
@@ -124,6 +133,89 @@ app.add_typer(evaluation_app, name="evaluation")
 app.add_typer(canary_app, name="canary")
 app.add_typer(automation_app, name="automation")
 console = Console()
+
+
+def _usage_sink(output_root: Path):
+    """Create a fail-closed JSON sidecar writer for provider token counters."""
+
+    def persist(record: ProviderUsageRecord) -> None:
+        publish_bytes_atomic(
+            output_root / "provider-usage" / f"{record.usage_id}.json",
+            canonical_bytes(record) + b"\n",
+        )
+
+    return persist
+
+
+def _configured_token_budgets(config: PipelineConfig) -> dict[str, int]:
+    """Return the most conservative declared daily token budget per model."""
+    budgets: dict[str, int] = {}
+    for role in (
+        config.providers.translator,
+        config.providers.mini_verifier,
+        config.providers.strong_judge,
+    ):
+        if role.daily_token_budget is None:
+            continue
+        existing = budgets.get(role.model)
+        budgets[role.model] = (
+            role.daily_token_budget if existing is None else min(existing, role.daily_token_budget)
+        )
+    return budgets
+
+
+def _print_live_cost(
+    output_root: Path,
+    *,
+    stage: str,
+    token_budgets: Mapping[str, int] | None = None,
+) -> None:
+    """Render provider-reported usage and price-card estimates without secrets."""
+    lines = cost_lines(output_root)
+    table = Table(title=f"Live cost — {stage}", show_header=True, header_style="bold cyan")
+    table.add_column("Provider", style="cyan")
+    table.add_column("Model", style="bold")
+    table.add_column("Requests", justify="right")
+    table.add_column("In / cached / out", justify="right")
+    table.add_column("Priced", justify="right")
+    table.add_column("This run / daily cap", justify="right")
+    table.add_column("Estimated USD", justify="right", style="green")
+    for line in lines:
+        budget = token_budgets.get(line.model) if token_budgets is not None else None
+        used = line.input_tokens + line.output_tokens
+        budget_text = "not configured" if budget is None else f"{used:,} / {budget:,}"
+        table.add_row(
+            line.provider,
+            line.model,
+            str(line.requests),
+            f"{line.input_tokens:,} / {line.cached_input_tokens:,} / {line.output_tokens:,}",
+            str(line.priced_responses),
+            budget_text,
+            format_usd(line.estimated_usd),
+        )
+    if not lines:
+        table.add_row("—", "—", "0", "0 / 0 / 0", "0", "not configured", "$0.000000")
+    console.print(table)
+    if lines:
+        console.print(
+            f"[bold green]Cumulative estimated spend:[/bold green] "
+            f"{format_usd(estimated_total_usd(lines))}"
+        )
+        for line in lines:
+            budget = token_budgets.get(line.model) if token_budgets is not None else None
+            used = line.input_tokens + line.output_tokens
+            if budget is not None and used >= budget:
+                console.print(
+                    f"[bold red]Configured daily token cap exceeded in this run:[/bold red] "
+                    f"{line.model} {used:,}/{budget:,}"
+                )
+            elif budget is not None and used * 100 >= budget * 80:
+                console.print(
+                    "[yellow]Configured daily token cap is at least 80% consumed "
+                    "in this run:[/yellow] "
+                    f"{line.model} {used:,}/{budget:,}"
+                )
+
 
 _DEFAULT_PIPELINE_CONFIG = Path("configs/pipeline.toml")
 _LOCAL_ENV_FILE = Path(".env")
@@ -828,14 +920,26 @@ def automation_run(
         ),
     ] = None,
     workers: Annotated[
-        int,
+        int | None,
         typer.Option(
             "--workers",
             min=1,
             max=16,
-            help="Maximum concurrent independent translation or judge calls.",
+            help="Optional override for every role's configured concurrent-worker limit.",
         ),
-    ] = 4,
+    ] = None,
+    strong_pass_sample_percent: Annotated[
+        int,
+        typer.Option(
+            "--strong-pass-sample-percent",
+            min=0,
+            max=100,
+            help=(
+                "Deterministic percentage of mini passes sent to the strong judge "
+                "for an independent audit; mini non-passes always escalate."
+            ),
+        ),
+    ] = 2,
     live: Annotated[
         bool,
         typer.Option(
@@ -843,12 +947,15 @@ def automation_run(
         ),
     ] = False,
 ) -> None:
-    """Produce a two-judge-passing, upload-ready HF JSONL review package.
+    """Produce a selectively double-checked, upload-ready HF JSONL review package.
 
     The runner selects only conflict-free, source-explicit, policy-covered
     canonical episodes. It continues after per-episode failure, changes from
     DeepSeek Flash to Pro only for known safe terminal failures, and never
-    automatically resends an uncertain network delivery. The resulting HF
+    automatically resends an uncertain network delivery. The mini judge sees
+    every translated leaf; its non-passes and a deterministic sample of its
+    passes go to the strong judge. An unsampled mini pass is sufficient, while
+    every escalated leaf is decided by the strong judge. The resulting HF
     directory remains ``pending_human_approval`` and cannot claim Gold.
     """
     if not live:
@@ -870,6 +977,7 @@ def automation_run(
         raise typer.Exit(code=2)
     try:
         live_config = load_live_config(config)
+        token_budgets = _configured_token_budgets(live_config)
         translator = live_config.providers.translator
         if translator.provider != "deepseek" or translator.endpoint is None:
             raise AutonomousPipelineError("automation requires an explicit DeepSeek translator")
@@ -883,6 +991,16 @@ def automation_run(
                 {translator.api_key_env, *(role.api_key_env for role in judge_roles)}
             ),
             env_file=_LOCAL_ENV_FILE,
+        )
+        translation_workers = workers if workers is not None else translator.max_workers
+        mini_workers = (
+            workers if workers is not None else live_config.providers.mini_verifier.max_workers
+        )
+        strong_workers = (
+            workers if workers is not None else live_config.providers.strong_judge.max_workers
+        )
+        console.print(
+            "[bold cyan][1/5] Selecting conflict-free, policy-covered candidates[/bold cyan]"
         )
         candidate_root = output / "candidate"
         candidate = prepare_automation_candidates(
@@ -899,6 +1017,10 @@ def automation_run(
         )
         policy = load_field_policy(field_policy)
         prompt_bundle = load_prompt_bundle(prompt)
+        console.print(
+            f"[bold cyan][2/5] Translating {len(candidate.members)} episodes "
+            f"with {translator.model} (workers={translation_workers})[/bold cyan]"
+        )
         translation = run_automation_translation(
             candidate_jsonl,
             output / "translation",
@@ -909,8 +1031,14 @@ def automation_run(
                 credential_name=translator.api_key_env,
                 secret_lookup=resolver.resolve,
             ),
-            max_workers=workers,
+            max_workers=translation_workers,
         )
+        console.print(
+            f"[green]translation complete[/green] translated={translation.translated_records} "
+            f"needs_review={translation.needs_review_records} "
+            f"fallback_routes={translation.fallback_routes}"
+        )
+        _print_live_cost(output, stage="translation", token_budgets=token_budgets)
         translation_jsonl = _manifest_jsonl(
             output / "translation" / "translation-results", translation.result_manifest_id
         )
@@ -928,9 +1056,11 @@ def automation_run(
             field_policy=policy,
         )
         inputs_jsonl = output / "evaluation-inputs" / inputs.artifacts[0].relative_path
+        input_count = inputs.artifacts[0].row_count
 
         def judge_factory(
             role_name: Literal["mini_verifier", "strong_judge"],
+            usage_root: Path,
         ) -> JudgeFactory:
             role = (
                 live_config.providers.mini_verifier
@@ -941,6 +1071,7 @@ def automation_run(
                 credential_name=role.api_key_env,
                 secret_lookup=resolver.resolve,
             )
+            usage_sink = _usage_sink(usage_root)
 
             def factory(attempt_sink: ProviderAttemptSink) -> OpenAIResponsesJudge:
                 return OpenAIResponsesJudge(
@@ -948,35 +1079,88 @@ def automation_run(
                     role_name=role_name,
                     transport=transport,
                     attempt_sink=attempt_sink,
+                    usage_sink=usage_sink,
                 )
 
             return factory
 
+        console.print(
+            f"[bold cyan][3/5] Mini verification: {input_count} leaves with "
+            f"{live_config.providers.mini_verifier.model} (workers={mini_workers})[/bold cyan]"
+        )
         mini = run_live_evaluation(
             inputs_jsonl,
             output / "mini-judge",
             config=live_config,
             role_name="mini_verifier",
             run_id=f"{candidate.candidate_id}-mini",
-            judge_factory=judge_factory("mini_verifier"),
-            max_workers=workers,
+            judge_factory=judge_factory("mini_verifier", output / "mini-judge"),
+            max_workers=mini_workers,
         )
-        strong = run_live_evaluation(
-            inputs_jsonl,
-            output / "strong-judge",
-            config=live_config,
-            role_name="strong_judge",
-            run_id=f"{candidate.candidate_id}-strong",
-            judge_factory=judge_factory("strong_judge"),
-            max_workers=workers,
+        console.print(
+            f"[green]mini verification complete[/green] succeeded={mini.report.succeeded_rows} "
+            f"failed={mini.report.failed_rows}"
         )
+        _print_live_cost(output, stage="after mini verification", token_budgets=token_budgets)
         mini_jsonl = (
             output / "mini-judge" / "results" / mini.results_manifest.artifacts[0].relative_path
         )
-        strong_jsonl = (
-            output / "strong-judge" / "results" / strong.results_manifest.artifacts[0].relative_path
+        sample_basis_points = strong_pass_sample_percent * 100
+        escalation_inputs = prepare_strong_escalation_inputs(
+            inputs_jsonl,
+            mini_jsonl,
+            output / "strong-escalation-inputs",
+            pass_sample_basis_points=sample_basis_points,
         )
-        consensus = build_automation_consensus(mini_jsonl, strong_jsonl, output / "consensus")
+        strong_jsonl: Path | None = None
+        if escalation_inputs is None:
+            console.print(
+                "[green][4/5] Strong escalation skipped: every mini pass was outside "
+                "the deterministic audit sample[/green]"
+            )
+        else:
+            escalation_jsonl = (
+                output / "strong-escalation-inputs" / escalation_inputs.artifacts[0].relative_path
+            )
+            escalation_count = escalation_inputs.artifacts[0].row_count
+            console.print(
+                f"[bold cyan][4/5] Strong escalation: {escalation_count}/{input_count} leaves "
+                f"with {live_config.providers.strong_judge.model} "
+                f"(workers={strong_workers})[/bold cyan]"
+            )
+            strong = run_live_evaluation(
+                escalation_jsonl,
+                output / "strong-judge",
+                config=live_config,
+                role_name="strong_judge",
+                run_id=f"{candidate.candidate_id}-strong",
+                judge_factory=judge_factory("strong_judge", output / "strong-judge"),
+                max_workers=strong_workers,
+            )
+            strong_jsonl = (
+                output
+                / "strong-judge"
+                / "results"
+                / strong.results_manifest.artifacts[0].relative_path
+            )
+            console.print(
+                f"[green]strong escalation complete[/green] "
+                f"succeeded={strong.report.succeeded_rows} failed={strong.report.failed_rows}"
+            )
+            _print_live_cost(
+                output,
+                stage="after strong escalation",
+                token_budgets=token_budgets,
+            )
+        console.print(
+            "[bold cyan][5/5] Building hierarchical consensus and HF review package[/bold cyan]"
+        )
+        consensus = build_hierarchical_consensus(
+            mini_jsonl,
+            strong_jsonl,
+            output / "consensus",
+            pass_sample_basis_points=sample_basis_points,
+        )
         consensus_jsonl = _manifest_jsonl(
             output / "consensus" / "consensus", consensus.consensus_manifest_id
         )
@@ -987,6 +1171,7 @@ def automation_run(
             output / "hf-review-package",
             field_policy=policy,
         )
+        _print_live_cost(output, stage="completed run", token_budgets=token_budgets)
     except (
         AutonomousPipelineError,
         CredentialResolutionError,
@@ -994,6 +1179,7 @@ def automation_run(
         LiveEvaluationRuntimeError,
         OperationalTranslationError,
         ProviderAdapterError,
+        ProviderUsageSinkError,
         SecureTransportError,
         StrictJsonError,
         ValidationError,
@@ -1006,7 +1192,8 @@ def automation_run(
         f"candidates={translation.source_records} translated={translation.translated_records} "
         f"needs_review={translation.needs_review_records} "
         f"fallback_routes={translation.fallback_routes} "
-        f"two_judge_pass_units={consensus.accepted_units} "
+        f"strong_escalated_units={consensus.strong_escalated_units} "
+        f"accepted_units={consensus.accepted_units} "
         f"hf_review_rows={package.review_ready_records} status={package.status} "
         f"package={output / 'hf-review-package' / package.package_id}"
     )
@@ -1089,6 +1276,7 @@ def evaluation_run(
                 role_name=role,
                 transport=transport,
                 attempt_sink=attempt_sink,
+                usage_sink=_usage_sink(output),
             )
 
         artifacts = run_live_evaluation(
@@ -1098,6 +1286,7 @@ def evaluation_run(
             role_name=role,
             run_id=run_id,
             judge_factory=judge_factory,
+            max_workers=provider_role.max_workers,
         )
     except (
         LiveEvaluationConfigurationError,
@@ -1111,6 +1300,11 @@ def evaluation_run(
         f"[green]evaluation batch completed[/green] role={artifacts.report.role} "
         f"succeeded={artifacts.report.succeeded_rows} failed={artifacts.report.failed_rows} "
         f"report={artifacts.report.report_id} gold_release_allowed=false"
+    )
+    _print_live_cost(
+        output,
+        stage="evaluation batch",
+        token_budgets=_configured_token_budgets(live_config),
     )
 
 
@@ -1288,6 +1482,7 @@ def translate(
     except (
         OperationalTranslationError,
         ProviderAdapterError,
+        ProviderUsageSinkError,
         SecureTransportError,
         ValueError,
     ) as exc:
@@ -1298,6 +1493,11 @@ def translate(
         f"translated={report.translated_records} "
         f"research_required={report.research_required_records} "
         "promotion=not_eligible"
+    )
+    _print_live_cost(
+        output,
+        stage="translation batch",
+        token_budgets=_configured_token_budgets(live_config),
     )
 
 

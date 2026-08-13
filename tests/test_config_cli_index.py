@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from tests.helpers import canonical_fixture
 from toolcall_tr.cli import app
-from toolcall_tr.config import load_config
+from toolcall_tr.config import inspect_config, load_config
 from toolcall_tr.indexes import rebuild_membership_index
 
 
@@ -26,6 +26,16 @@ def test_enabling_any_provider_gate_is_rejected(tmp_path: Path) -> None:
     path.write_text(source.replace("enabled = false", "enabled = true", 1), encoding="utf-8")
     with pytest.raises(RuntimeError, match="requires providers"):
         load_config(path)
+
+
+def test_live_provider_worker_and_token_caps_are_explicit() -> None:
+    root = Path(__file__).resolve().parents[1]
+    config = inspect_config(root / "configs" / "provider-smoke.toml")
+    assert config.providers.translator.max_workers == 6
+    assert config.providers.mini_verifier.max_workers == 4
+    assert config.providers.strong_judge.max_workers == 2
+    assert config.providers.mini_verifier.daily_token_budget == 1_800_000
+    assert config.providers.strong_judge.daily_token_budget == 225_000
 
 
 def test_cli_smoke_and_translation_requires_explicit_live_inputs() -> None:

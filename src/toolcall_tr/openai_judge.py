@@ -26,7 +26,11 @@ from toolcall_tr.eval_contract import (
     build_mqm_finding,
 )
 from toolcall_tr.hashing import JsonValue, canonical_bytes, to_json_value
-from toolcall_tr.live_preflight import LivePreflightBlockedError, preflight_live_request
+from toolcall_tr.live_preflight import (
+    LivePreflightBlockedError,
+    LivePreflightDecision,
+    preflight_live_request,
+)
 from toolcall_tr.models import NonEmptyStr, StrictModel
 from toolcall_tr.provider_adapter import (
     ProviderConfigurationError,
@@ -40,6 +44,7 @@ from toolcall_tr.provider_provenance import (
     build_provider_attempt_record,
     emit_provider_attempt,
 )
+from toolcall_tr.provider_usage import ProviderUsageSink, emit_response_usage
 
 _OPENAI_HOST = "api.openai.com"
 _OPENAI_PATH = "/v1/responses"
@@ -152,10 +157,16 @@ def serialize_openai_judge_request(
                         "text": (
                             "You are a blind Turkish translation triage judge. Evaluate only "
                             "the supplied source and target excerpts. Do not accept a record "
-                            "into Gold. "
-                            "Return a pass only when there are no findings or unresolved reasons. "
-                            "For every finding, quote non-empty source and target excerpts from "
-                            "the input."
+                            "into Gold. Return exactly the required JSON object; the schema is "
+                            "the only output contract. A pass requires findings=[] and "
+                            "unresolved_reasons=[]; do not use pass when a material issue is "
+                            "present. A fail requires one or more grounded findings and "
+                            "unresolved_reasons=[]. Use needs_human_review only when you cannot "
+                            "reach a supported decision, and then provide one or more concise "
+                            "unresolved_reasons. For every finding, quote non-empty, contiguous "
+                            "source and target excerpts verbatim from the supplied input. Do not "
+                            "invent excerpts, use Markdown, add prose, or refer to information "
+                            "outside the supplied unit."
                         ),
                     }
                 ],
@@ -237,6 +248,7 @@ class OpenAIResponsesJudge:
         transport: ResponsesTransport,
         max_output_tokens: int = 512,
         attempt_sink: ProviderAttemptSink | None = None,
+        usage_sink: ProviderUsageSink | None = None,
     ) -> None:
         if role_name not in {"strong_judge", "mini_verifier"}:
             raise ValueError("OpenAI judge role must be strong_judge or mini_verifier")
@@ -245,6 +257,36 @@ class OpenAIResponsesJudge:
         self._transport = transport
         self._max_output_tokens = max_output_tokens
         self._attempt_sink = attempt_sink
+        self._usage_sink = usage_sink
+
+    def _emit_terminal(
+        self,
+        *,
+        request_body: bytes,
+        preflight: LivePreflightDecision,
+        provider: str,
+        model: str,
+        endpoint: str,
+        error: BaseException | None = None,
+        response_body: bytes | None = None,
+    ) -> None:
+        """Persist safe provenance and provider-reported token counters once."""
+        record = build_provider_attempt_record(
+            operation=ProviderOperation.JUDGE,
+            provider=provider,
+            model=model,
+            endpoint=endpoint,
+            request_body=request_body,
+            preflight=preflight,
+            error=error,
+            response_body=response_body,
+        )
+        emit_provider_attempt(self._attempt_sink, record)
+        emit_response_usage(
+            self._usage_sink,
+            attempt=record,
+            response_body=response_body,
+        )
 
     def judge(
         self,
@@ -284,16 +326,12 @@ class OpenAIResponsesJudge:
             ),
         )
         if not preflight.allowed:
-            emit_provider_attempt(
-                self._attempt_sink,
-                build_provider_attempt_record(
-                    operation=ProviderOperation.JUDGE,
-                    provider=role.provider,
-                    model=role.model,
-                    endpoint=role.endpoint,
-                    request_body=request_body,
-                    preflight=preflight,
-                ),
+            self._emit_terminal(
+                request_body=request_body,
+                preflight=preflight,
+                provider=role.provider,
+                model=role.model,
+                endpoint=role.endpoint,
             )
             raise LivePreflightBlockedError(preflight)
 
@@ -323,46 +361,34 @@ class OpenAIResponsesJudge:
             )
         except (ValueError, TypeError) as exc:
             error = ProviderResponseError("OpenAI output violates the local judge contract")
-            emit_provider_attempt(
-                self._attempt_sink,
-                build_provider_attempt_record(
-                    operation=ProviderOperation.JUDGE,
-                    provider=role.provider,
-                    model=role.model,
-                    endpoint=role.endpoint,
-                    request_body=request_body,
-                    preflight=preflight,
-                    error=error,
-                    response_body=raw_response,
-                ),
-            )
-            raise error from exc
-        except Exception as exc:
-            emit_provider_attempt(
-                self._attempt_sink,
-                build_provider_attempt_record(
-                    operation=ProviderOperation.JUDGE,
-                    provider=role.provider,
-                    model=role.model,
-                    endpoint=role.endpoint,
-                    request_body=request_body,
-                    preflight=preflight,
-                    error=exc,
-                    response_body=raw_response,
-                ),
-            )
-            raise
-        emit_provider_attempt(
-            self._attempt_sink,
-            build_provider_attempt_record(
-                operation=ProviderOperation.JUDGE,
+            self._emit_terminal(
+                request_body=request_body,
+                preflight=preflight,
                 provider=role.provider,
                 model=role.model,
                 endpoint=role.endpoint,
+                error=error,
+                response_body=raw_response,
+            )
+            raise error from exc
+        except Exception as exc:
+            self._emit_terminal(
                 request_body=request_body,
                 preflight=preflight,
+                provider=role.provider,
+                model=role.model,
+                endpoint=role.endpoint,
+                error=exc,
                 response_body=raw_response,
-            ),
+            )
+            raise
+        self._emit_terminal(
+            request_body=request_body,
+            preflight=preflight,
+            provider=role.provider,
+            model=role.model,
+            endpoint=role.endpoint,
+            response_body=raw_response,
         )
         return verdict
 

@@ -6,7 +6,7 @@ import tomllib
 from pathlib import Path
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from toolcall_tr.models import NonEmptyStr, StrictModel
 
@@ -18,6 +18,8 @@ class ProviderRole(StrictModel):
     endpoint: str | None = None
     temperature: float | None = None
     thinking: bool | None = None
+    max_workers: int = Field(default=4, ge=1, le=16)
+    daily_token_budget: int | None = Field(default=None, ge=1)
 
 
 class ProviderConfig(StrictModel):

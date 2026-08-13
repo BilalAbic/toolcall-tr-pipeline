@@ -1,6 +1,6 @@
 # 02 — Veri sözleşmesi ve aşamalar
 
-Uygulama notu: A1–A6'nın çekirdeği fixture/property testleriyle uygulanmıştır. Ayrıca NVIDIA When2Call'ın test ve train split'leri ile Salesforce xLAM 60k train kaynağı revision-pinned snapshot/ingest/canonical/audit pilotlarından geçti; tüm satırlar canonical veya gerekçeli karantina olarak muhasebeleştirildi. When2Call training hedeflerinde yalnız source-explicit `<TOOLCALL>`, açık ek-bilgi istemi ve açık tool-unavailable davranışı kabul edilir. A7'nin explicit JSON Pointer kanıtlı deterministik Pass 1'i, A8'in exact/near-duplicate ve conflict audit altyapısı, A9'un split-leakage/selection freeze sözleşmesi fixture düzeyinde uygulanmıştır. Gerçek insan review ve S400 membership yoktur. A10–A13 için canlı komut yüzeyi vardır; source-explicit/conflict-free 3 episode / 20 leaf pre-review canary DeepSeek çeviri ve OpenAI mini-judge ile çalıştırılmış, ancak üretim release'i yapılmamıştır. Güncel kapsam için [06 — Uygulama durumu](06-implementation-status.md) belgesine bakın.
+Uygulama notu: A1–A6'nın çekirdeği fixture/property testleriyle uygulanmıştır. Ayrıca NVIDIA When2Call'ın test ve train split'leri ile Salesforce xLAM 60k train kaynağı revision-pinned snapshot/ingest/canonical/audit pilotlarından geçti; tüm satırlar canonical veya gerekçeli karantina olarak muhasebeleştirildi. When2Call training hedeflerinde yalnız source-explicit `<TOOLCALL>`, açık ek-bilgi istemi ve açık tool-unavailable davranışı kabul edilir. A7'nin explicit JSON Pointer kanıtlı deterministik Pass 1'i, A8'in exact/near-duplicate ve conflict audit altyapısı, A9'un split-leakage/selection freeze sözleşmesi fixture düzeyinde uygulanmıştır. Gerçek insan review ve S400 membership yoktur. A10–A13 için canlı komut yüzeyi vardır: tarihsel 3 episode / 20 leaf pre-review canary'nin yanında, `translation-prompt-0.3.0` / Flash 6-worker ile 50 conflict-free adaylık bounded automation regression'ı 46 translation, 541 accepted leaf ve 40 satırlık pending-HF review paketi üretti. Üretim release'i yapılmamıştır; aktif v0.4 prompt ayrı immutable batch'te doğrulanacaktır. Güncel kapsam için [06 — Uygulama durumu](06-implementation-status.md) belgesine bakın.
 
 ## 1. Satırın anlamı
 
@@ -479,7 +479,7 @@ Her translation config önce memory-off dev/canary/frozen promotion eval'ini ge�
 
 ### A12 — Kalite ve insan kabulü
 
-Deterministik validator → {kör mini adversarial verifier + kör güçlü semantik judge} → gerekirse kontrollü repair → training render/loss-mask → insan kabulü. İlk 400'de iki judge da zorunlu ve birbirinin sonucunu görmez. Her attempt append-only event'tir.
+Deterministik validator → kör mini structured verifier → mini non-pass + deterministik pass örneklemi için kör güçlü semantik judge → training render/loss-mask → insan kabulü. Örneklem dışı mini `pass` yeterlidir; escalation'da güçlü judge son kararı verir. Her attempt append-only event'tir.
 
 İnsan incelemesinden önce sürümlü trainer adapter kayıtları hedef model chat template'ine render eder ve şunları doğrular:
 

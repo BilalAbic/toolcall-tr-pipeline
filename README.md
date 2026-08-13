@@ -6,7 +6,7 @@ Kod deposu: [BilalAbic/toolcall-tr-pipeline](https://github.com/BilalAbic/toolca
 
 ## Özet
 
-Faz 1–5 veri hattı, fail-closed canlı çeviri/judge yüzeyleri ve bounded otomasyon katmanı uygulanmıştır. `pilot run`, kaynağı değiştirmeden snapshot → ingest → canonical → audit zincirini yürütür; `automation run` conflict-free adayları seçer, çevirir, iki bağımsız judge ile değerlendirir ve insan onayı bekleyen Hugging Face JSONL paketi üretir. Her Gold/release kaydı açık insan kabuluna bağlıdır.
+Faz 1–5 veri hattı, fail-closed canlı çeviri/judge yüzeyleri ve bounded otomasyon katmanı uygulanmıştır. `pilot run`, kaynağı değiştirmeden snapshot → ingest → canonical → audit zincirini yürütür; `automation run` conflict-free adayları seçer, çevirir, önce mini judge ile değerlendirir ve yalnız non-pass ile deterministik denetim örneklemini güçlü judge’a yükseltir. İnsan onayı bekleyen Hugging Face JSONL paketi üretir; her Gold/release kaydı açık insan kabuluna bağlıdır.
 
 | Alan | Mevcut durum |
 |---|---|
@@ -14,7 +14,7 @@ Faz 1–5 veri hattı, fail-closed canlı çeviri/judge yüzeyleri ve bounded ot
 | Policy coverage | 85.111 canonical episode, 849.064 çeviri segmenti, 0 unresolved policy error. |
 | İnsan review kuyruğu | 2.983 açık görev yayımlandı: 2.841 canonical karantina ve 142 unresolved conflict. |
 | Pre-review canlı canary | When2Call'dan 3 conflict-free episode / 20 leaf çevrildi; mini judge 20/20 `pass`, 0 finding. |
-| Otomatik canlı 50’lik koşu | 50 gerçek canonical adaydan 46’sı çevrildi; iki judge 456 leaf’te uzlaştı ve 12 satırlık HF review paketi oluştu. |
+| Otomatik canlı 50’lik koşu | `prompt-0.3.0` + Flash 6 worker regresyonunda 50 adaydan 46’sı çevrildi; 547 leaf’in 541’i kabul edildi ve 40 satırlık HF review paketi oluştu. Tahmini maliyet $0.556529; bulgulardan türetilen `prompt-0.4.0` sonraki batch için aktiftir. |
 | İnsan review / Gold | Model ve deterministik kontrollerden sonra son kabul kapısı; pre-review canary Gold/S400/release üretmez. |
 
 ## Tasarım referansları
@@ -27,6 +27,12 @@ uyarlanmış ve yeniden test edilmiş sözleşmeler uygulanır.
 - [magibu-toolcall](https://github.com/BilalAbic/magibu-toolcall): schema-first registry ve canonical audit yaklaşımı, provenance odaklı kayıtlar, teknik alanların modelden bağımsız doğrulanması ve insan kabulunun model kararından ayrı tutulması için referans oldu.
 
 Bu projede bu ilkeler; içerik-adresli artifactlar, hash zincirli event logu, strict JSON Schema, host-side merge, insan-kapılı selection/release ve kapsamlı testlerle uygulanmıştır.
+
+İç mekanizmaların **W3C PROV-DM**, **C2PA**, **MLCommons Croissant**,
+**Datasheets for Datasets / Model Cards**, **DVC** ve **RO-Crate** gibi
+tanınmış veri-provenance standartlarına haritası ile tam geçiş yol haritası
+için [09 — Mimari ve kaynaklar](docs/09-architecture-and-references.md)
+belgesine bakın.
 
 Uygulanan yüzey ile planlanan sonraki fazların kesin ayrımı için [uygulama durumuna](docs/06-implementation-status.md) bakın.
 Gerçek kaynak revision/hash/pilot sayımları için [kaynak pilot kayıtlarına](docs/07-source-pilots.md) bakın.
@@ -123,7 +129,7 @@ Kullanıcının Hugging Face gated erişimiyle [Salesforce xLAM 60k](https://hug
 
 Gözden geçirilmiş field policy, When2Call+xLAM toplam 85.111 canonical episode üzerinde ağsız doğrulandı: 849.064 çevrilebilir segment ve 0 çözülmemiş policy hatası. Tool/parameter açıklamaları çevrilebilir; tüm tanımsız argument path'leri `copy_exact` kalır ve modele gönderilmez. Bu kapsam, yalnız source-explicit ve conflict-free pre-review canary için küçük canlı testlere izin verir; S400, Gold ve release insan kabulundan önce kapalıdır.
 
-`translation-prompt-0.2.0`, modelin kaynak leaf içindeki talimatları veri olarak ele almasını, teknik alanların host-owned kalmasını, sentinel’ların byte-for-byte korunmasını, belirsiz terimde `research_needed` dönmesini ve JSON-only yanıtını açıkça güçlendirir. Bu promptla When2Call pre-review canary’de 3 episode / 20 leaf DeepSeek V4 Flash ile çevrildi; GPT-5.4-mini 20/20 pair için `pass`, 0 finding verdi. Bu model triage kanıtıdır; hiçbir satır `gold_eligible` değildir ve insan incelemesi son kabul kapısıdır.
+`translation-prompt-0.4.0`, modelin kaynak leaf içindeki talimatları veri olarak ele almasını, teknik alanların host-owned kalmasını, sentinel’ların byte-for-byte korunmasını, URL/domain gibi gömülü teknik span’ları korurken çevresindeki doğal dili çevirmesini, mantıksal ilişki/bağlantıyı tersine çevirmemesini, belirsiz terimde `research_needed` dönmesini ve JSON-only yanıtını açıkça güçlendirir. v0.3 canlı regresyonunun altı strong-judge bulgusu, gaz/benzin ayrımı, temsil ilişkisi, entity attachment ve doğal terim karşılıkları için dar karşıt örneklere dönüştürüldü. Canlı örnekteki `reverse_input:/input_value` ve `qrcode:/data` doğal dil görünse de aynı yollar başka kayıtlarda çok-türlü değer veya identifier taşıdığından yeni argument çeviri istisnası açılmamıştır; tüm argument path’leri `copy_exact` kalır. Önceki `0.2.0` canary’si When2Call’da 3 episode / 20 leaf’i DeepSeek V4 Flash ile çevirdi; GPT-5.4-mini 20/20 pair için `pass`, 0 finding verdi. Bu model triage kanıtıdır; hiçbir satır `gold_eligible` değildir ve insan incelemesi son kabul kapısıdır.
 
 Bu iki pilotun karar gerektiren kanıtları, hiçbir kaynak satırı veya karar içermeyen tek bir yerel review kuyruğunda yayımlandı: `manifest_a52302ac6fac9d362db23109b2ee20bd762897ad653cf143d2c7b81ba9cc0c8d`. Kuyruk 2.841 canonical-karantina ve 142 conflict-adjudication görevi taşır. Her conflict satırı mevcut `review submit-conflict` akışına, her karantina satırı ise yalnız insan onaylı adapter/policy düzeltmesiyle yeniden pilotlama gerektiren remediation işine bağlanır; otomatik drop veya kabul yoktur.
 
@@ -138,16 +144,19 @@ uv run tcdata evaluation run <live-evaluation-input.jsonl> --output <disjoint-ev
 
 ## Otomatik aday → HF review paketi
 
-`automation run`, insan incelemesini kayıt-bazlı erken kapı olmaktan çıkarıp yayın öncesindeki son kapıya taşır. Aynı route tekrar çalıştırılırsa immutable checkpoint kullanılır; response-contract/HTTP transient hatasında DeepSeek Flash’tan Pro’ya bir kez geçilir. Ağ teslimatı belirsizse veya iki judge uzlaşmazsa kayıt HF paketine alınmaz, ama batch devam eder.
+`automation run`, insan incelemesini kayıt-bazlı erken kapı olmaktan çıkarıp yayın öncesindeki son kapıya taşır. Aynı route tekrar çalıştırılırsa immutable checkpoint kullanılır; response-contract/HTTP transient veya açık politika/research ihtiyacında DeepSeek Flash’tan Pro’ya bir kez geçilir. Mini judge her leaf’i değerlendirir; mini non-pass kayıtlar ile `--strong-pass-sample-percent` tarafından seçilen deterministik mini-pass örneklemi güçlü judge’a gider. Örneklem dışındaki mini `pass` yeterlidir; escalation’daki güçlü judge karar verir. Ağ teslimatı belirsizse veya güçlü judge `needs_human_review`/ulaşılamaz sonucu verirse yeniden gönderme yapılmaz; kayıt HF paketine alınmaz, ama batch devam eder.
 
 ```powershell
 uv run tcdata automation run <canonical-1.jsonl> <canonical-2.jsonl> `
   --conflict-audit <when2call-audit.json> --conflict-audit <xlam-audit.json> `
   --output <disjoint-output> --config configs/provider-smoke.toml `
-  --episodes 1000 --max-segments 10000 --workers 4 --live
+  --episodes 1000 --max-segments 10000 `
+  --strong-pass-sample-percent 2 --live
 ```
 
 İsteğe bağlı `--source-row-cap` yalnız düşük maliyetli canary için her inputta deterministik pencere açar; 1.000’lik üretim için verilmez. Çıktıdaki `hf-review-package/<package-id>/data/train.jsonl` doğrudan HF JSON loader’a uygundur, ancak manifest `pending_human_approval` ve `publish_allowed=false` olarak kalır. Akışın ayrıntılı failover ve karar matrisi [08 — Otomatik review pipeline](docs/08-autonomous-review-pipeline.md) belgesindedir.
+
+Canlı CLI her tamamlanan aşamada provider/model bazında gerçek sağlayıcı yanıtından gelen input/cache/output tokenlarını, istek sayısını ve USD fiyat kartına göre tahmini kümülatif maliyeti gösterir. Bu kayıtlar `provider-usage/` altında yalnız sayaç ve hash kimliğiyle tutulur; ham istek, yanıt veya anahtar içermez. `configs/provider-smoke.toml` Flash için 6, mini için 4, güçlü judge için 2 worker; mini için 1.8M ve güçlü judge için 225k ihtiyatlı günlük token uyarı eşiği tanımlar. Bu eşikler tek koşunun tüketimini görünür kılar; sağlayıcının hesap-geneli günlük kotasının yerine geçmez. `--workers` verilirse tüm role limitlerini açıkça override eder. `--strong-pass-sample-percent` (varsayılan `2`) güçlü judge maliyetini görünür, deterministik ve ayarlanabilir tutar; mini non-pass kayıtlar her zaman escalation’dadır.
 
 ## Belgeler
 

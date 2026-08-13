@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Hash-linked token counts for one provider response.\n\n``input_tokens`` includes cached input tokens when a provider reports\nthem.  ``cached_input_tokens`` is therefore a priced subset, never an\nadditional token count.",
+  "properties": {
+    "attempt_id": {
+      "pattern": "^pvattempt_[0-9a-f]{64}$",
+      "title": "Attempt Id",
+      "type": "string"
+    },
+    "cached_input_tokens": {
+      "minimum": 0,
+      "title": "Cached Input Tokens",
+      "type": "integer"
+    },
+    "input_tokens": {
+      "minimum": 0,
+      "title": "Input Tokens",
+      "type": "integer"
+    },
+    "model": {
+      "minLength": 1,
+      "title": "Model",
+      "type": "string"
+    },
+    "operation": {
+      "enum": [
+        "translation",
+        "judge"
+      ],
+      "title": "Operation",
+      "type": "string"
+    },
+    "output_tokens": {
+      "minimum": 0,
+      "title": "Output Tokens",
+      "type": "integer"
+    },
+    "provider": {
+      "minLength": 1,
+      "title": "Provider",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "provider-usage-0.1.0",
+      "default": "provider-usage-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "const": "provider_response",
+      "default": "provider_response",
+      "title": "Source",
+      "type": "string"
+    },
+    "usage_id": {
+      "pattern": "^pvusage_[0-9a-f]{64}$",
+      "title": "Usage Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "usage_id",
+    "attempt_id",
+    "provider",
+    "model",
+    "operation",
+    "input_tokens",
+    "cached_input_tokens",
+    "output_tokens"
+  ],
+  "title": "ProviderUsageRecord",
+  "type": "object"
+}

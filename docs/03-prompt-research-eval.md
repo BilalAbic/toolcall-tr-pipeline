@@ -1,6 +1,6 @@
 # 03 — Prompt, araştırma ve kalite tasarımı
 
-Durum: **Faz 5 sözleşme/güvenlik tabanı ve sınırlı canlı yürütme yüzeyi uygulanmıştır.** `field_policy.py` explicit leaf extraction ve host-side merge'i; `translation_contract.py` segment-only request/response, sentinel, NFC ve coverage kontrolünü; `egress_guard.py` secret/PII/local path/private endpoint taramasını; `eval_contract.py` atomic MQM bulguları, Wilson %95 coverage raporu ve human-only gold kabulünü; `prompt_contract.py` immutable katmanlı prompt bundle'ı uygular. `secure_transport.py`, allow-list'li `.env` resolver ve DeepSeek/OpenAI adapterları yalnız explicit `--live`, non-default config, preflight ve disjoint output ile çalışır; sentetik smoke'lar ve source-explicit/conflict-free 3 episode / 20 leaf pre-review canary canlı endpointlerde doğrulanmıştır. `translation_memory.py` yalnız human-promoted full segmentleri tüm exact context/policy anahtarıyla bulur ve hedef conflictinde fail-closed kalır. `research_policy.py` deterministik risk routing ile public-HTTPS/bütçeli not-sent request/evidence metadata sağlar, fetch içermez. Automated repair, insan review, S400 ve Gold release hâlâ kapalıdır; eval verdict'i yalnız triage'dır.
+Durum: **Faz 5 sözleşme/güvenlik tabanı ve bounded canlı yürütme yüzeyi uygulanmıştır.** `field_policy.py` explicit leaf extraction ve host-side merge'i; `translation_contract.py` segment-only request/response, sentinel, NFC ve coverage kontrolünü; `egress_guard.py` secret/PII/local path/private endpoint taramasını; `eval_contract.py` atomic MQM bulguları, Wilson %95 coverage raporu ve human-only gold kabulünü; `prompt_contract.py` immutable katmanlı prompt bundle'ı uygular. `secure_transport.py`, allow-list'li `.env` resolver ve DeepSeek/OpenAI adapterları yalnız explicit `--live`, non-default config, preflight ve disjoint output ile çalışır; tarihsel 3 episode / 20 leaf pre-review canary'nin yanında, v0.3 / Flash 6-worker 50-episode regression'ı 46 translation, 541 accepted leaf ve 40 pending-HF row üretti. `translation_memory.py` yalnız human-promoted full segmentleri tüm exact context/policy anahtarıyla bulur ve hedef conflictinde fail-closed kalır. `research_policy.py` deterministik risk routing ile public-HTTPS/bütçeli not-sent request/evidence metadata sağlar, fetch içermez. Automated repair, insan review, S400 ve Gold release hâlâ kapalıdır; eval verdict'i yalnız triage'dır. Aktif v0.4 prompt ayrı immutable batch'te doğrulanacaktır.
 
 ## 1. Ana ilke
 
@@ -47,9 +47,16 @@ Her JSON Pointer yolu aşağıdaki sınıflardan birine girer:
 | policy'de adı geçmeyen herhangi bir argument path | gözden geçirilmiş global fallback: `copy_exact` |
 | reasoning/thinking | kaynakta yoksa `null`, üretilmez |
 
-Argument değerleri varsayılan olarak modele gönderilmez: `configs/field_policy.toml` içindeki tek izinli global fallback `*` / `/*` yalnız `copy_exact` olabilir. Bir argument ancak isimli tool + exact JSON Pointer ile ayrıca gözden geçirilip `translate` yapılabilir; schema formatı, enum üyeliği ve path güvenlik denetimi yine uygulanır. Böylece gerçek tool kayıtları eksik policy nedeniyle durmaz, fakat teknik veya kullanıcı girdisi niteliğindeki argumentlar yanlışlıkla çevrilmez. Bu yapı bir sözcük sözlüğü değil, alanın veri tipini ve işlevini tanımlayan sürümlü bir sözleşmedir.
+Argument değerleri varsayılan olarak modele gönderilmez: `configs/field_policy.toml` içindeki tek izinli global fallback `*` / `/*` yalnız `copy_exact` olabilir. Bir argument ancak isimli tool + exact JSON Pointer ile ayrıca gözden geçirilip `translate` yapılabilir; schema formatı, enum üyeliği ve path güvenlik denetimi yine uygulanır. Canlı 50’lik pakette doğal dil gibi görünen `reverse_input:/input_value` çok-türlü (string/boolean/number) şemaya, `qrcode:/data` ise başka kayıtlarda identifier değere sahip olduğundan hiçbir istisna açılmadı. Böylece gerçek tool kayıtları eksik policy nedeniyle durmaz, fakat teknik veya kullanıcı girdisi niteliğindeki argumentlar yanlışlıkla çevrilmez. Bu yapı bir sözcük sözlüğü değil, alanın veri tipini ve işlevini tanımlayan sürümlü bir sözleşmedir.
 
 ## 3. Çevirici system prompt katmanları
+
+`translation-prompt-0.4.0`, 50-episode v0.3 regression’ında strong judge’ın
+doğruladığı altı fail’den türetilmiş dar karşıt örnekler taşır: gaz/benzin
+anlam daraltması, `represents` ilişkisinin ters çevrilmesi, entity-address
+attachment, konum kapsamı ve doğal olmayan `ride type` calque’u. Bu örnekler
+yalnız doğal dil leaf’leri içindir; tool argument, enum, ID ve URL kuralı
+değişmez. Yeni prompt sonraki ayrı immutable batch’te canlı doğrulanır.
 
 Tek büyük ve tekrarlı system prompt yerine derlenen kısa katmanlar kullanılır:
 
@@ -193,9 +200,7 @@ Durumlar:
 ```text
 not_needed
   veya
-needs_research → researched → retranslate
-                        ↘ conflicting → human_review
-                        ↘ unresolved  → human_review/quarantine
+needs_research → human_review/quarantine
 ```
 
 `conflicting` veya `unresolved` otomatik accepted olamaz.
@@ -285,16 +290,13 @@ Kategoriler:
 
 Tek 1–10 puanı yoktur. Judge, enum hata kodu + kategori + şiddet + segment/span + kısa kanıt üretir. Model grader insan etiketleriyle kalibre edilmeden otomatik kabul yetkisi alamaz. [OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
 
-## 12. Repair protokolü
+## 12. Fallback ve escalation protokolü
 
 - Temel provider adapter route’unun otomatik retry bütçesi `0`dır; append-only attempt kaydı aynı model/isteği tekrar göndermez. `automation run` yalnız `provider_response_invalid`, `malformed_response`, `response_too_large` veya HTTP transient sınıfında etkilenen episode için bir kez farklı DeepSeek Pro route’u açabilir; ağ teslimatı belirsizse tekrar göndermez.
-- Semantic fail aynı promptla kör retry almaz.
-- Judge serbest talimat yerine enum hata kodu, segment ID ve span verir.
-- Repair modeline yalnız hatalı segment, kaynak segment, doğrulanmış evidence ve izinli hata kodu gönderilir.
-- Diğer segmentler immutable kalır; host değişmediklerini hash ile doğrular.
-- En fazla bir semantic repair attempt'i; sonra tüm kapılar baştan.
-- İkinci semantic fail insan/reject kuyruğuna gider.
-- Tüm denemeler append-only saklanır.
+- Semantic fail aynı promptla kör retry almaz; mevcut üretim akışında judge sonucu çeviriyi tekrar tetiklemez.
+- Mini judge tüm leaf'ler için yapılandırılmış verdict üretir. Mini non-pass ve deterministik mini-pass örneklemi güçlü judge'a gider; örneklem dışındaki mini `pass` yeterlidir.
+- Güçlü judge escalation'da son değerlendiricidir. `pass` kabul edilir; `fail`, `needs_human_review` veya `unavailable` insan/reject kuyruğuna gider.
+- Judge serbest talimat yerine enum hata kodu, segment ID ve span verir; tüm attempt/verdict kayıtları append-only saklanır.
 
 ## 13. İnsan gold protokolü
 
@@ -353,22 +355,21 @@ Her adımda yalnız bir değişken değişir:
 4. fidelity contract,
 5. ölçülmüş 2–4 karşıt örnek,
 6. bağımsız risk router + ihtiyaç-temelli research,
-7. mini adversarial verifier,
-8. güçlü judge,
-9. controlled repair.
+7. mini structured verifier,
+8. non-pass + deterministic-pass-sample için güçlü judge escalation.
 
 Günlük geliştirme dev + canary üzerinde yapılır; frozen gold yalnız sürüm promotion'ında açılır.
 
 ## 16. Model ve maliyet politikası
 
-Run config şunları exact-byte hash ile sabitler: endpoint, provider, model/snapshot, system fingerprint, reasoning/thinking, temperature/top_p, token limitleri, SDK sürümü, prompt/output schema/field policy/protector/research/judge/repair/eval sürümleri.
+Run config şunları exact-byte hash ile sabitler: endpoint, provider, model/snapshot, system fingerprint, reasoning/thinking, temperature/top_p, token limitleri, SDK sürümü, prompt/output schema/field policy/protector/research/judge/eval sürümleri ve güçlü-judge pass örneklem oranı.
 
 İlk 30/100/250/400:
 
 ```text
-DeepSeek → deterministic → {kör GPT mini + kör GPT güçlü} → insan
+DeepSeek Flash → güvenli hatada Pro → mini judge → non-pass + deterministik pass örnekleminde güçlü judge → insan
 ```
 
-400 sonrasında mini tüm uygun kayıtlarda kalabilir; güçlü judge riskli/research/disagreement/random calibration diliminde çalışabilir. Ancak insanın tek tek kabul etmediği kayıt yalnız silver olur. Kalibrasyon eşiği bozulursa güçlü judge ve insan kapsaması otomatik %100'e döner.
+Mini judge tüm uygun kayıtlarda çalışır; güçlü judge mini non-pass, `research_needed`/risk ve deterministik kalibrasyon örnekleminde çalışır. Ancak insanın tek tek kabul etmediği kayıt yalnız silver olur. Kalibrasyon eşiği bozulursa güçlü judge ve insan kapsaması otomatik %100'e döner.
 
-Episode başına translation, retry, research, retranslation, mini, strong, repair ve insan süresi ayrı ölçülür. Config sorgu/token/retry/repair ve parasal üst sınır taşır; limit aşımı sessiz düşürme değil human/quarantine durumudur.
+Episode başına Flash/Pro route, research, mini, strong escalation ve insan süresi ayrı ölçülür. Config sorgu/token/fallback/escalation ve parasal üst sınır taşır; limit aşımı sessiz düşürme değil human/quarantine durumudur.
