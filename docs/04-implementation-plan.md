@@ -130,7 +130,7 @@ Kapı: iki datasetin tamamı canonicalize veya gerekçeli quarantine olur; kayı
 
 ## Faz 4 — Kaynak doğruluğu, duplicate, conflict ve selection
 
-Durum: **altyapı fixture düzeyinde; gerçek exact conflict kanıtı xLAM 60k pilotunda üretilmiştir.** Explicit Pointer kanıtlı Pass 1, deterministic `source_review`/`source_invalid` routing, exact alias/conflict audit, review-only near-duplicate retrieval, connected-component split guard, append-only human-adjudication logu ve S400 prefix freeze kod/test yüzeyinde mevcuttur. xLAM'daki 6 hard conflict insan review bekler; gerçek `source_valid` veya S400 freeze üretilmemiştir.
+Durum: **altyapı fixture düzeyinde; gerçek exact conflict kanıtı When2Call cross-split (136) ve xLAM 60k (6) üzerinde üretilmiştir.** Explicit Pointer kanıtlı Pass 1, deterministic `source_review`/`source_invalid` routing, exact alias/conflict audit, review-only near-duplicate retrieval, connected-component split guard, append-only human-adjudication logu, karar üretmeyen `review prepare` worklist'i ve S400 prefix freeze kod/test yüzeyinde mevcuttur. 2.841 karantina ile 142 conflict için yerel worklist yayımlanmıştır; gerçek `source_valid`, insan kararı veya S400 freeze üretilmemiştir.
 
 Kurulacaklar:
 

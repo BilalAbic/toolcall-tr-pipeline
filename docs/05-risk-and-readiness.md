@@ -2,7 +2,7 @@
 
 Bu belge, planın en kritik arıza biçimlerini görünür tutar ve bir sonraki faza geçmeden önce kontrol edilecek kısa listeleri tanımlar. Ayrıntılı süreçleri tekrar etmez; `02-data-pipeline.md` ve `04-implementation-plan.md` kapılarına bağlanır.
 
-Güncel karar: **Faz 1–5 temel, sınırlı canlı provider yüzeyi ve iki gerçek kaynağın modelsiz pilotu hazırdır; bu gerçek kaynak egress'i, insan review veya release'e geçiş onayı değildir.** Varsayılan config çevrimdışıdır; canlı komutlar explicit `--live`, non-default config, preflight ve disjoint output gerektirir. Aşağıdaki listelerde test/model kanıtı, modelsiz gerçek kaynak kanıtı ve henüz açık üretim koşulları ayrılır.
+Güncel karar: **Faz 1–5 temel, sınırlı canlı provider yüzeyi, iki gerçek kaynağın modelsiz pilotu ve karar üretmeyen insan-review worklist'i hazırdır; bu gerçek kaynak egress'i, insan review kararı veya release'e geçiş onayı değildir.** Varsayılan config çevrimdışıdır; canlı komutlar explicit `--live`, non-default config, preflight ve disjoint output gerektirir. Aşağıdaki listelerde test/model kanıtı, modelsiz gerçek kaynak kanıtı ve henüz açık üretim koşulları ayrılır.
 
 ## 1. Öncelikli risk kaydı
 
@@ -50,10 +50,11 @@ Gerçek kaynak üzerinde tamamlanan kanıt:
 - [x] NVIDIA When2Call tüm erişilebilir splitler revision-pinned pilot: 27.952 kaynak-valid satır, 27.393 canonical, 559 gerekçeli karantina; dört splitte 2.917 exact duplicate group ve 136 human-review conflict adayı. Eğitim split'lerindeki seçilmiş no-tool hedefleri dahil edilir; belirsiz hedefler fail-closed karantinadadır.
 - [x] Salesforce xLAM 60k train revision-pinned pilot: 60.000 kaynak-valid satır, 57.718 canonical, 2.282 gerekçeli karantina, 6 insan-review hard conflict adayı.
 - [x] Her iki pilot kaynak değişiminde fail-closed rehash, immutable artifact publish ve kaynak-provider egress'i olmadan çalıştı.
+- [x] Karar üretmeyen `review prepare` worklist'i, güncel beş canonical-quarantine artifactı ve iki exact audit'ten 2.841 karantina + 142 conflict görevi yayımladı; otomatik drop veya kabul yok.
 
 Gerçek kaynak üzerinde açık kapı:
 
-- [ ] When2Call'daki 559 ve xLAM'daki 2.282 karantina ile When2Call'daki 136 ve xLAM'daki 6 unresolved conflict, yetkili insan tarafından kaynak kurallarına göre adjudicate edilmeli; hiçbir kayıt otomatik onarılmamalı.
+- [ ] Hazır 2.983 görevlik worklist'teki When2Call 559 / xLAM 2.282 karantina ve When2Call 136 / xLAM 6 unresolved conflict, yetkili insan tarafından kaynak kurallarına göre adjudicate edilmeli; hiçbir kayıt otomatik onarılmamalı.
 - [ ] Her canonical araç argümanı için gerçek source-evidence Pass 1 ve insan `source_valid` kararları üretilmeli.
 - [ ] Faz 4–7 S400 membership, gerçek renderer/loss-mask ve insan review kapıları tamamlanmalı.
 

@@ -23,7 +23,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 |---|---|---|---|
 | Proje iskeleti ve kilitli ortam | Uygulandı | `pyproject.toml`, `uv.lock`, `src/toolcall_tr/`, `tests/` | Python 3.12, `uv`, pytest/Hypothesis, Ruff ve Pyright yapılandırması |
 | Strict sözleşmeler | Uygulandı | `src/toolcall_tr/models.py`, `source.py`, `artifacts.py`, `events.py`, `diagnostics.py` | Pydantic strict/frozen, extra alan reddi, role/call/state doğrulaması |
-| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Seksen iki immutable versioned artifact; dialect ve meta-schema kontrolü |
+| Draft 2020-12 şemaları | Uygulandı | `scripts/export_schemas.py`, `schemas/0.1.0/*.schema.json` | Seksen üç immutable versioned artifact; dialect ve meta-schema kontrolü |
 | Diagnostic catalog | Uygulandı | `src/toolcall_tr/data/diagnostic_catalog.json` | Bilinen kodların anlamı catalogdan gelir; bilinmeyen kod fail-closed |
 | Canonical JSON/hash/ID | Uygulandı | `src/toolcall_tr/hashing.py`, `ids.py` | RFC 8785/JCS, SHA-256, key-order invariance, non-finite sayı reddi |
 | Artifact manifesti | Uygulandı | `src/toolcall_tr/artifacts.py`, `shards.py` | Content-addressed isim, dengeli row accounting, validate-before-publish, overwrite yasağı, idempotent resume |
@@ -49,6 +49,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 | Faz 5 terminology/research metadata | Fixture düzeyinde uygulandı | `research_policy.py` | Deterministic abbreviation/policy-risk router, public HTTPS/bütçe validator ve not-sent evidence sidecar; fetch yok |
 | Canlı provider smoke | Uygulandı, sentetik sınırda | `secure_transport.py`, `credentials.py`, `deepseek_adapter.py`, `openai_judge.py`, `live_preflight.py`, `provider smoke` CLI | DeepSeek V4 çeviri ve OpenAI GPT-5.4-mini judge için gerçek endpoint smoke'u geçti; sabit sentetik içerik, explicit live config, endpoint allow-list, preflight ve local strict validation. Gerçek kaynak satırı bu endpointlere gönderilmedi. |
 | Operasyonel kaynak pilotu | Uygulandı, gerçek kaynak kanıtıyla | `src/toolcall_tr/pilot.py`, `pilot run` CLI | When2Call revision `0582f…ace53`, tüm splitler: 27.952 satır / 27.393 canonical / 559 karantina / 136 cross-split conflict. Training için source-explicit `<TOOLCALL>`, açık clarification ve açık tool-unavailable hedefleri alınır. xLAM 60k revision `26d14e…7866`: 57.718 canonical / 2.282 karantina / 6 hard-conflict. Kaynak yeniden hash'lendi; model/provider çağrısı yok. |
+| İnsan review kuyruğu | Uygulandı, gerçek karar bekliyor | `review_queue.py`, `review prepare` CLI | Immutable karantina/audit kanıtları sıralı human-only görevlere dönüşür; 2026-08-13 yerel kuyruğu 2.841 karantina + 142 conflict görevi taşır (`manifest_a523…c8d`). Karar, drop veya kaynak değişikliği üretmez. |
 | İnsan review ve Gold release | Uygulandı, gerçek karar bekliyor | `human_review_log.py`, `review submit-*`, `release build/validate` | Haricî tek-kayıt reviewer JSONL strict doğrulanır ve hash zincirine append edilir. Release her satır için local verdict, açık human acceptance ve linked review ID olmadan oluşmaz. |
 | Provider attempt provenance | Uygulandı | `provider_provenance.py`, canlı adapterlar | Ham içerik veya credential saklamayan hash-only attempt kaydı; preflight/success/failure ve status sınıfları, otomatik retry bütçesi 0. |
 | Operasyonel canlı çeviri | Uygulandı, gerçek-source policy coverage tamam; egress yetkisi kapalı | `src/toolcall_tr/operational_translation.py`, `translate` CLI | Yalnız field-policy tarafından izinli leaf'ler DeepSeek'e gider; gerçek canonical coverage ağsız geçti, source rehash ve host merge zorunlu. 3 sentetik no-tool episode'u gerçek endpointte geçti. İnsan review/selection kapıları nedeniyle gerçek kaynak egress'i, otomatik retry, Gold ve release yok. |
@@ -113,6 +114,7 @@ Bu belge, plan belgelerindeki hedeflerle repoda gerçekten çalışan yüzeyi bi
 - `release-dataset-file.schema.json`
 - `release-gold-member.schema.json`
 - `release-manifest.schema.json`
+- `review-task.schema.json`
 - `render-artifact.schema.json`
 - `render-candidate.schema.json`
 - `render-character-range.schema.json`
@@ -198,7 +200,7 @@ uv run python -c "import json; from pathlib import Path; from jsonschema import 
 
 ## Sonraki uygulama sırası
 
-1. When2Call'daki 559 ve xLAM 60k'daki 2.282 karantinayı; When2Call'daki 136 ve xLAM'daki 6 unresolved conflict'i kaynak kayıtlarını değiştirmeden yetkili insan review/adjudication ile ele al. Quarantine/conflict varsa karar olmadan devam etme.
+1. Hazır `review prepare` kuyruğundaki 2.841 karantina ve 142 unresolved conflict'i kaynak kayıtlarını değiştirmeden yetkili insan review/adjudication ile ele al. Quarantine/conflict varsa karar olmadan devam etme.
 2. Canonical survivor'lar üzerinde Faz 4 source evidence/selection artifactlarını üret; source-review/adjudication kararlarını yalnız yetkili insanlarla append-only loga al ve S400'ü ancak tüm kapılar kanıtlandıktan sonra dondur.
 3. Render/loss-mask sözleşmesini gerçek hedef renderer/tokenizer ile ek kabul testlerinden geçir; target-only supervision sınırını kanıtla.
 4. Küçük, onaylı pilot membership sağlandığında `translate` ve `evaluation run` komutlarını preflight ve hash-only attempt kayıtlarıyla çalıştır; model çıktısını Gold kabulü sayma.

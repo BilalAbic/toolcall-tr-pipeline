@@ -14,7 +14,7 @@ from rich.table import Table
 from toolcall_tr.adapters import get_adapter
 from toolcall_tr.adjudication import ConflictAdjudication, ConflictAdjudicationLog
 from toolcall_tr.artifacts import publish_bytes_atomic, publish_jsonl_artifact
-from toolcall_tr.audit import audit_exact_conflicts
+from toolcall_tr.audit import ExactConflictAudit, audit_exact_conflicts
 from toolcall_tr.canonicalize import canonicalize as canonicalize_record
 from toolcall_tr.config import PipelineConfig, inspect_config, load_config, load_live_config
 from toolcall_tr.credentials import AllowListedSecretResolver, CredentialResolutionError
@@ -32,7 +32,7 @@ from toolcall_tr.events import EventLog
 from toolcall_tr.field_policy import load_field_policy
 from toolcall_tr.hashing import JsonValue, canonical_bytes, sha256_bytes
 from toolcall_tr.human_review_log import HumanEvaluationReviewLog
-from toolcall_tr.jsonio import StrictJsonError, iter_jsonl
+from toolcall_tr.jsonio import StrictJsonError, iter_jsonl, loads_strict_bytes
 from toolcall_tr.live_evaluation import (
     LiveEvaluationConfigurationError,
     LiveEvaluationRuntimeError,
@@ -45,7 +45,11 @@ from toolcall_tr.operational_translation import (
     run_operational_translation,
 )
 from toolcall_tr.phase4_config import load_phase4_config
-from toolcall_tr.pilot import PilotConfigurationError, run_operational_pilot
+from toolcall_tr.pilot import (
+    CanonicalQuarantineRecord,
+    PilotConfigurationError,
+    run_operational_pilot,
+)
 from toolcall_tr.prompt_contract import load_prompt_bundle
 from toolcall_tr.provider_adapter import ProviderAdapterError
 from toolcall_tr.provider_provenance import ProviderAttemptSink
@@ -56,6 +60,7 @@ from toolcall_tr.release_contract import (
     validate_release_manifest,
     write_release_manifest,
 )
+from toolcall_tr.review_queue import ReviewQueueInputError, build_review_tasks
 from toolcall_tr.secure_transport import SecureTransportError, StdlibJsonTransport
 from toolcall_tr.selection import SelectionCandidate, freeze_s400
 from toolcall_tr.similarity import SimilarityDocument, retrieve_near_duplicate_candidates
@@ -129,6 +134,14 @@ def _read_exactly_one_jsonl_object(path: Path) -> dict[str, JsonValue]:
     if not isinstance(first, dict):
         raise ValueError("review decision JSONL record must be an object")
     return first
+
+
+def _read_strict_json_object(path: Path, *, label: str) -> dict[str, JsonValue]:
+    """Read one JSON object with the same fail-closed parser used for JSONL."""
+    value = loads_strict_bytes(path.read_bytes())
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be a JSON object")
+    return value
 
 
 def _read_model_verdicts(path: Path) -> list[ModelEvaluationVerdict]:
@@ -922,8 +935,79 @@ def validate() -> None:
 @review_app.callback(invoke_without_command=True)
 def review(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is None:
-        console.print("Specify review submit-evaluation or review submit-conflict.")
+        console.print(
+            "Specify review prepare, review submit-evaluation, or review submit-conflict."
+        )
         raise typer.Exit(code=2)
+
+
+@review_app.command("prepare")
+def review_prepare(
+    canonical_quarantine_jsonl: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--canonical-quarantine",
+            exists=True,
+            dir_okay=False,
+            help="Repeatable canonical-quarantine JSONL input.",
+        ),
+    ] = None,
+    conflict_audit_json: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--conflict-audit",
+            exists=True,
+            dir_okay=False,
+            help="Repeatable exact-conflict-audit JSON input.",
+        ),
+    ] = None,
+    output: Annotated[Path, typer.Option("--output")] = Path("artifacts/review-queue"),
+) -> None:
+    """Publish an open human worklist from immutable quarantine/audit evidence.
+
+    The command writes no decisions. A conflict task carries everything needed
+    to prepare a separate, reviewer-authored ``review submit-conflict`` JSONL
+    entry. A quarantine task remains open until approved remediation produces
+    a new pilot; neither input record is repaired or dropped here.
+    """
+    quarantine_paths = canonical_quarantine_jsonl or []
+    audit_paths = conflict_audit_json or []
+    if not quarantine_paths and not audit_paths:
+        raise ValueError("provide at least one --canonical-quarantine or --conflict-audit")
+    resolved_output = output.resolve(strict=False)
+    for input_path in [*quarantine_paths, *audit_paths]:
+        if input_path.resolve(strict=True).is_relative_to(resolved_output):
+            raise ValueError("review queue output must not contain an input evidence file")
+    try:
+        quarantines = [
+            CanonicalQuarantineRecord.model_validate(record, strict=True)
+            for path in quarantine_paths
+            for record in iter_jsonl(path)
+        ]
+        audits = [
+            ExactConflictAudit.model_validate(
+                _read_strict_json_object(path, label="conflict audit"), strict=True
+            )
+            for path in audit_paths
+        ]
+        tasks = build_review_tasks(quarantines, audits)
+    except (ReviewQueueInputError, StrictJsonError, ValidationError, ValueError) as exc:
+        console.print(f"[red]review queue refused:[/red] {type(exc).__name__}")
+        raise typer.Exit(code=2) from exc
+    manifest = publish_jsonl_artifact(
+        output,
+        logical_name="human-review-tasks",
+        schema_version="review-task-0.1.0",
+        stage="human-review-queue",
+        records=[task.model_dump(mode="json", exclude_none=False) for task in tasks],
+    )
+    quarantine_count = sum(task.task_kind == "canonical_quarantine" for task in tasks)
+    conflict_count = sum(task.task_kind == "conflict_adjudication" for task in tasks)
+    console.print(
+        "[green]human review queue published[/green] "
+        f"manifest={manifest.manifest_id} "
+        f"quarantines={quarantine_count} conflicts={conflict_count}"
+    )
 
 
 @review_app.command("submit-evaluation")

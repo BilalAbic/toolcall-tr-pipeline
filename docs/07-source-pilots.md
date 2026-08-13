@@ -15,6 +15,9 @@ içermez. Kaynak snapshotları `sources/`, türetilmiş JSONL ve pilot kanıtlar
   gerçek kaynak provider egress'i ve Gold/release yapılmamıştır.
 - `blocked` sonucu bir hata gizlemez: aşağıdaki karantina veya conflict kanıtı
   çözülmeden sonraki kapı açılmaz.
+- Bu kanıtlar 2026-08-13'te `review prepare` ile karar üretmeden sıralı yerel
+  worklist'e dönüştürüldü; kaynak satırı, credential veya reviewer kararı
+  worklist'e yazılmadı.
 
 ## NVIDIA When2Call
 
@@ -68,3 +71,16 @@ JSON dizi kaynak biçimi JSONL'e yalnız dışarıda, content-addressed ve
 no-overwrite olarak türetildi. Dönüştürme kaynağın JSON hash'ini ve türetilen
 JSONL hash'ini birleştirir; pilot snapshotı türetilmiş JSONL hash'iyle aynı
 kimlik zincirine bağlanır.
+
+## Yayımlanan insan review kuyruğu
+
+`artifacts/review-queue/real-sources-20260813/` altında content-addressed
+olarak yayımlanan worklist manifesti
+`manifest_a52302ac6fac9d362db23109b2ee20bd762897ad653cf143d2c7b81ba9cc0c8d`'dir.
+Beş güncel canonical-quarantine artifactı ile When2Call cross-split ve xLAM
+exact audit'inden türetildi: 2.841 `remediate_canonical_quarantine` ve 142
+`submit_conflict_adjudication` görevi, toplam 2.983 açık insan görevi vardır.
+Bu, karar veya kaynak düzeltmesi değildir: conflict satırı yalnız haricî,
+reviewer-authored `review submit-conflict` kararı hazırlanmasına yardım eder;
+karantina satırı ise onaylı adapter/policy değişikliğinden sonra yeni immutable
+pilot gerektirir.

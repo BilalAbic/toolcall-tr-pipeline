@@ -82,6 +82,7 @@ from toolcall_tr.research_policy import (
     TerminologyInput,
     TerminologyRisk,
 )
+from toolcall_tr.review_queue import ReviewTask
 from toolcall_tr.selection import SelectionCandidate, SelectionManifest
 from toolcall_tr.similarity import NearDuplicateCandidate, SimilarityDocument
 from toolcall_tr.source import BronzeRecord, SourceSnapshot
@@ -148,6 +149,7 @@ MODELS = {
     "release-dataset-file.schema.json": ReleaseDatasetFile,
     "release-gold-member.schema.json": ReleaseGoldMember,
     "release-manifest.schema.json": ReleaseManifest,
+    "review-task.schema.json": ReviewTask,
     "render-artifact.schema.json": RenderArtifact,
     "render-candidate.schema.json": RenderCandidate,
     "render-character-range.schema.json": CharacterRange,
