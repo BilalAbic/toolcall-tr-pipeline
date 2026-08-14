@@ -3,6 +3,7 @@
 Bu proje, İngilizce tool-calling ve no-tool konuşma verilerini yüksek kaliteli Türkçe eğitim verisine dönüştürmek için tasarlanmış bağımsız bir veri hattıdır.
 
 Kod deposu: [BilalAbic/toolcall-tr-pipeline](https://github.com/BilalAbic/toolcall-tr-pipeline).
+Hugging Face preview: [bilalabic/turkish-tool-calling-quality-gated-preview](https://huggingface.co/datasets/bilalabic/turkish-tool-calling-quality-gated-preview).
 
 ## Özet
 
