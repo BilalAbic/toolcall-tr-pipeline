@@ -8,6 +8,7 @@ from pathlib import Path
 from toolcall_tr.adjudication import ConflictAdjudication
 from toolcall_tr.artifacts import ContentManifest
 from toolcall_tr.audit import ConflictCandidate, ExactConflictAudit, ExactDuplicateGroup
+from toolcall_tr.automation_recovery import AutomationRecoveryPlan, AutomationRecoveryReport
 from toolcall_tr.autonomous_pipeline import (
     AutomationCandidateManifest,
     AutomationCandidateMember,
@@ -126,6 +127,8 @@ MODELS = {
     "canonical-episode.schema.json": CanonicalEpisode,
     "autonomous-candidate-0.1.1.schema.json": AutomationCandidateManifest,
     "autonomous-candidate-member.schema.json": AutomationCandidateMember,
+    "automation-recovery.schema.json": AutomationRecoveryReport,
+    "automation-recovery-plan.schema.json": AutomationRecoveryPlan,
     "autonomous-consensus.schema.json": AutomationConsensus,
     "autonomous-consensus-report.schema.json": AutomationConsensusReport,
     "hierarchical-consensus.schema.json": HierarchicalConsensus,

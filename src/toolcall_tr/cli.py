@@ -16,6 +16,11 @@ from toolcall_tr.adapters import get_adapter
 from toolcall_tr.adjudication import ConflictAdjudication, ConflictAdjudicationLog
 from toolcall_tr.artifacts import ContentManifest, publish_bytes_atomic, publish_jsonl_artifact
 from toolcall_tr.audit import ExactConflictAudit, audit_exact_conflicts
+from toolcall_tr.automation_recovery import (
+    AutomationRecoveryError,
+    inspect_automation_recovery,
+    run_automation_recovery,
+)
 from toolcall_tr.autonomous_pipeline import (
     AutonomousPipelineError,
     build_hierarchical_consensus,
@@ -1233,6 +1238,238 @@ def automation_run(
         f"accepted_units={consensus.accepted_units} "
         f"hf_review_rows={package.review_ready_records} status={package.status} "
         f"package={output / 'hf-review-package' / package.package_id}"
+    )
+
+
+@automation_app.command("recover-plan")
+def automation_recover_plan(
+    parent_root: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            file_okay=False,
+            help="Completed automation root whose immutable evidence will be read only.",
+        ),
+    ],
+    retry_http_status: Annotated[
+        list[int] | None,
+        typer.Option(
+            "--retry-http-status",
+            help="Repeatable explicit retry status; only 402 and 429 are permitted.",
+        ),
+    ] = None,
+) -> None:
+    """Show selected payment/quota retries without credentials, writes, or egress."""
+    if not retry_http_status:
+        console.print(
+            "[yellow]automation recover-plan requires one or more --retry-http-status values; "
+            "no provider request was made.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    try:
+        plan = inspect_automation_recovery(
+            parent_root, retry_http_statuses=retry_http_status
+        )
+    except (AutomationRecoveryError, OSError, StrictJsonError, ValidationError, ValueError) as exc:
+        console.print(f"[red]automation recovery plan refused:[/red] {type(exc).__name__}")
+        raise typer.Exit(code=2) from exc
+    console.print(
+        "[green]automation recovery plan ready[/green] "
+        f"plan_id={plan.plan_id} translation_episodes={plan.translation_retry_episodes} "
+        f"mini_units={plan.mini_retry_units} "
+        f"existing_strong_units={plan.strong_retry_units}"
+    )
+    console.print(
+        "No provider request was made and no artifact was written. Recovered mini verdicts "
+        "and new translations can change the final strong-selection count."
+    )
+
+
+@automation_app.command("recover")
+def automation_recover(
+    parent_root: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            file_okay=False,
+            help="Completed automation root whose immutable evidence will be read only.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--output",
+            help="Required new, disjoint sibling root for the recovery overlay.",
+        ),
+    ],
+    config: Annotated[
+        Path,
+        typer.Option(
+            ...,
+            "--config",
+            help="Required non-default live config after provider credit/quota is available.",
+        ),
+    ] = _DEFAULT_PIPELINE_CONFIG,
+    field_policy: Annotated[
+        Path,
+        typer.Option("--field-policy", exists=True, dir_okay=False),
+    ] = Path("configs/field_policy.toml"),
+    prompt: Annotated[
+        Path,
+        typer.Option("--prompt", exists=True, dir_okay=False),
+    ] = Path("configs/prompt_bundle.toml"),
+    retry_http_status: Annotated[
+        list[int] | None,
+        typer.Option(
+            "--retry-http-status",
+            help="Repeatable explicit paid-retry status; only 402 and 429 are permitted.",
+        ),
+    ] = None,
+    workers: Annotated[
+        int | None,
+        typer.Option("--workers", min=1, max=16, help="Optional override for every recovery role."),
+    ] = None,
+    strong_pass_sample_percent: Annotated[
+        int,
+        typer.Option("--strong-pass-sample-percent", min=0, max=100),
+    ] = 2,
+    approve_paid_retry: Annotated[
+        bool,
+        typer.Option(
+            "--approve-paid-retry",
+            help=(
+                "Acknowledge that selected 402/429 requests will be sent once more "
+                "after credit/quota recovery."
+            ),
+        ),
+    ] = False,
+    live: Annotated[
+        bool,
+        typer.Option("--live", help="Explicitly permit the selected recovery provider requests."),
+    ] = False,
+) -> None:
+    """Recover only selected payment/quota failures without changing a completed run.
+
+    The parent is read-only.  Recovery must use a new sibling output root and
+    explicitly name each permitted HTTP status.  Successful parent checkpoints
+    are copied only by hash reference into a fresh effective overlay; they are
+    never resent to a provider.
+    """
+    if not live or not approve_paid_retry:
+        console.print(
+            "[yellow]automation recover requires both --live and --approve-paid-retry; "
+            "no provider request was made.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    if _is_default_pipeline_config(config):
+        console.print(
+            "[yellow]automation recover requires an explicit non-default --config path; "
+            "no provider request was made.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    if not retry_http_status:
+        console.print(
+            "[yellow]automation recover requires one or more --retry-http-status values; "
+            "no provider request was made.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+    try:
+        live_config = load_live_config(config)
+        token_budgets = _configured_token_budgets(live_config)
+        translator = live_config.providers.translator
+        judge_roles = (live_config.providers.mini_verifier, live_config.providers.strong_judge)
+        if translator.provider != "deepseek" or translator.endpoint is None:
+            raise AutomationRecoveryError("recovery requires an explicit DeepSeek translator")
+        if any(role.provider != "openai" or role.endpoint is None for role in judge_roles):
+            raise AutomationRecoveryError(
+                "recovery requires explicit OpenAI mini and strong judges"
+            )
+        resolver = AllowListedSecretResolver(
+            allowed_names=frozenset(
+                {translator.api_key_env, *(role.api_key_env for role in judge_roles)}
+            ),
+            env_file=_LOCAL_ENV_FILE,
+        )
+        translation_workers = workers if workers is not None else translator.max_workers
+        mini_workers = (
+            workers if workers is not None else live_config.providers.mini_verifier.max_workers
+        )
+        strong_workers = (
+            workers if workers is not None else live_config.providers.strong_judge.max_workers
+        )
+
+        def judge_factory(
+            role_name: Literal["mini_verifier", "strong_judge"], usage_root: Path
+        ) -> JudgeFactory:
+            role = (
+                live_config.providers.mini_verifier
+                if role_name == "mini_verifier"
+                else live_config.providers.strong_judge
+            )
+            transport = StdlibJsonTransport(
+                credential_name=role.api_key_env,
+                secret_lookup=resolver.resolve,
+            )
+            usage_sink = _usage_sink(usage_root)
+
+            def factory(attempt_sink: ProviderAttemptSink) -> OpenAIResponsesJudge:
+                return OpenAIResponsesJudge(
+                    config=live_config,
+                    role_name=role_name,
+                    transport=transport,
+                    attempt_sink=attempt_sink,
+                    usage_sink=usage_sink,
+                )
+
+            return factory
+
+        console.print(
+            "[bold cyan]Recovering only explicitly authorised payment/quota failures; "
+            "the parent run remains read-only[/bold cyan]"
+        )
+        report = run_automation_recovery(
+            parent_root,
+            output,
+            config=live_config,
+            field_policy=load_field_policy(field_policy),
+            prompt=load_prompt_bundle(prompt),
+            translation_transport=StdlibJsonTransport(
+                credential_name=translator.api_key_env,
+                secret_lookup=resolver.resolve,
+            ),
+            mini_judge_factory=judge_factory("mini_verifier", output / "mini-retry"),
+            strong_judge_factory=judge_factory("strong_judge", output / "strong-retry"),
+            retry_http_statuses=retry_http_status,
+            translation_workers=translation_workers,
+            mini_workers=mini_workers,
+            strong_workers=strong_workers,
+            strong_pass_sample_basis_points=strong_pass_sample_percent * 100,
+        )
+        _print_live_cost(output, stage="recovery completed", token_budgets=token_budgets)
+    except (
+        AutomationRecoveryError,
+        CredentialResolutionError,
+        LiveEvaluationConfigurationError,
+        LiveEvaluationRuntimeError,
+        OperationalTranslationError,
+        ProviderAdapterError,
+        ProviderUsageSinkError,
+        SecureTransportError,
+        StrictJsonError,
+        ValidationError,
+        ValueError,
+    ) as exc:
+        console.print(f"[red]automation recovery refused or failed:[/red] {type(exc).__name__}")
+        raise typer.Exit(code=2) from exc
+    console.print(
+        "[green]automation recovery completed[/green] "
+        "translation="
+        f"{report.recovered_translation_episodes}/{report.retried_translation_episodes} "
+        f"mini={report.recovered_mini_units}/{report.retried_mini_units} "
+        f"strong={report.recovered_strong_units}/{report.retried_strong_units} "
+        f"package={output / 'hf-review-package' / report.hf_package_id} "
+        "status=pending_human_approval"
     )
 
 

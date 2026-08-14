@@ -87,6 +87,35 @@ uv run tcdata automation status <output-root> --config configs/provider-smoke.to
 Komut aday/çeviri/judge/consensus/HF paket aşamalarını, checkpoint sayısını,
 provider-model bazında istek/token sayaçlarını ve tahmini USD toplamını basar.
 
+### Kredi veya kota kesintisinden sonra recovery
+
+Tamamlanan bir route veya judge checkpoint'i normal `automation run` ile yeniden
+gönderilmez. OpenAI/DeepSeek kredi veya kota kesintisinden sonra bu davranış
+korunur; ancak operatör `automation recover` ile yeni ve disjoint bir sibling
+output köküne açık bir ücretli tekrar izni verebilir. Komut yalnız seçilmiş HTTP
+`402` ve `429` terminal attemptlerini yeniden dener, parent run'ı salt-okunur
+bırakır ve yeni sonuçlarla hash-bağlı effective translation/mini/strong overlay,
+consensus ve `pending_human_approval` HF review paketi üretir.
+
+```powershell
+uv run tcdata automation recover-plan <completed-output-root> --retry-http-status 429
+
+uv run tcdata automation recover <completed-output-root> `
+  --output <new-recovery-output-root> --config configs/provider-smoke.toml `
+  --retry-http-status 429 --approve-paid-retry --live
+```
+
+Birden çok açık tür için `--retry-http-status 402 --retry-http-status 429`
+kullanılır. `network_delivery_unknown`, preflight block, response/policy
+doğrulama hatası ve diğer kalıcı 4xx sonuçları recovery kapsamı dışındadır.
+Bu sınır, provider'ın önceki isteği işlemiş olabileceği durumlarda yinelenen
+ücret ve kanıt çelişkisini önler.
+
+`recover-plan` yalnız parent evidence içindeki anlık seçilebilir attemptleri sayar.
+Recovery ile gelen yeni çeviriler ve güncellenmiş mini verdictler, güçlü judge
+escalation seçimini yeniden hesaplar; bu nedenle nihai güçlü istek sayısı plan
+çıktısındaki `existing_strong_units` değeriyle aynı olmak zorunda değildir.
+
 Egress öncesi gerçek aday ve leaf sayısı için aynı argümanlarla aşağıdaki plan
 komutu kullanılabilir. Bu yalnız candidate artifactini yazar; sonra aynı output
 kökü `automation run --live` ile devam ettirilir:

@@ -52,6 +52,13 @@ def test_cli_smoke_and_translation_requires_explicit_live_inputs() -> None:
     assert automation_plan_help.exit_code == 0
     assert "without provider egress" in automation_plan_help.stdout
     assert "--candidate-offset" in automation_plan_help.stdout
+    automation_recover_help = runner.invoke(app, ["automation", "recover", "--help"])
+    assert automation_recover_help.exit_code == 0
+    assert "--approve-paid-retry" in automation_recover_help.stdout
+    assert "--retry-http-status" in automation_recover_help.stdout
+    automation_recover_plan_help = runner.invoke(app, ["automation", "recover-plan", "--help"])
+    assert automation_recover_plan_help.exit_code == 0
+    assert "No provider request" not in automation_recover_plan_help.stdout
     index_blocked = runner.invoke(app, ["index", "rebuild"])
     assert index_blocked.exit_code == 2
     assert "intentionally unavailable" in index_blocked.stdout
@@ -67,6 +74,31 @@ def test_automation_status_is_read_only_and_available_before_a_run(tmp_path: Pat
     assert "Automation status" in result.stdout
     assert "not started" in result.stdout
     assert "$0.000000" in result.stdout
+
+
+def test_automation_recovery_requires_explicit_paid_live_opt_in(tmp_path: Path) -> None:
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    output = tmp_path / "recovery"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "automation",
+            "recover",
+            str(parent),
+            "--output",
+            str(output),
+            "--config",
+            "configs/provider-smoke.toml",
+            "--retry-http-status",
+            "429",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--live and --approve-paid-retry" in result.stdout
+    assert not output.exists()
 
 
 def test_membership_index_is_rebuildable_and_deterministic(fixture_root: Path) -> None:

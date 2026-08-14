@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Immutable, non-promoting receipt for a paid retry overlay.",
+  "properties": {
+    "consensus_report_id": {
+      "pattern": "^autohconsreport_[0-9a-f]{64}$",
+      "title": "Consensus Report Id",
+      "type": "string"
+    },
+    "effective_mini_manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Effective Mini Manifest Id",
+      "type": "string"
+    },
+    "effective_strong_manifest_id": {
+      "anyOf": [
+        {
+          "pattern": "^manifest_[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Effective Strong Manifest Id"
+    },
+    "effective_translation_manifest_id": {
+      "pattern": "^manifest_[0-9a-f]{64}$",
+      "title": "Effective Translation Manifest Id",
+      "type": "string"
+    },
+    "hf_package_id": {
+      "pattern": "^hfpackage_[0-9a-f]{64}$",
+      "title": "Hf Package Id",
+      "type": "string"
+    },
+    "parent_candidate_id": {
+      "pattern": "^autocand_[0-9a-f]{64}$",
+      "title": "Parent Candidate Id",
+      "type": "string"
+    },
+    "parent_candidate_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Parent Candidate Sha256",
+      "type": "string"
+    },
+    "parent_mini_results_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Parent Mini Results Sha256",
+      "type": "string"
+    },
+    "parent_strong_results_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Parent Strong Results Sha256"
+    },
+    "parent_translation_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Parent Translation Sha256",
+      "type": "string"
+    },
+    "promotion": {
+      "const": "not_eligible",
+      "default": "not_eligible",
+      "title": "Promotion",
+      "type": "string"
+    },
+    "publish_allowed": {
+      "const": false,
+      "default": false,
+      "title": "Publish Allowed",
+      "type": "boolean"
+    },
+    "recovered_mini_units": {
+      "minimum": 0,
+      "title": "Recovered Mini Units",
+      "type": "integer"
+    },
+    "recovered_strong_units": {
+      "minimum": 0,
+      "title": "Recovered Strong Units",
+      "type": "integer"
+    },
+    "recovered_translation_episodes": {
+      "minimum": 0,
+      "title": "Recovered Translation Episodes",
+      "type": "integer"
+    },
+    "recovery_id": {
+      "pattern": "^autorecovery_[0-9a-f]{64}$",
+      "title": "Recovery Id",
+      "type": "string"
+    },
+    "retried_mini_units": {
+      "minimum": 0,
+      "title": "Retried Mini Units",
+      "type": "integer"
+    },
+    "retried_strong_units": {
+      "minimum": 0,
+      "title": "Retried Strong Units",
+      "type": "integer"
+    },
+    "retried_translation_episodes": {
+      "minimum": 0,
+      "title": "Retried Translation Episodes",
+      "type": "integer"
+    },
+    "retry_http_statuses": {
+      "items": {
+        "type": "integer"
+      },
+      "minItems": 1,
+      "title": "Retry Http Statuses",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "automation-recovery-0.1.0",
+      "default": "automation-recovery-0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "recovery_id",
+    "parent_candidate_id",
+    "retry_http_statuses",
+    "parent_candidate_sha256",
+    "parent_translation_sha256",
+    "parent_mini_results_sha256",
+    "parent_strong_results_sha256",
+    "retried_translation_episodes",
+    "recovered_translation_episodes",
+    "retried_mini_units",
+    "recovered_mini_units",
+    "retried_strong_units",
+    "recovered_strong_units",
+    "effective_translation_manifest_id",
+    "effective_mini_manifest_id",
+    "effective_strong_manifest_id",
+    "consensus_report_id",
+    "hf_package_id"
+  ],
+  "title": "AutomationRecoveryReport",
+  "type": "object"
+}

@@ -162,6 +162,36 @@ Uzun koşu ayrı bir PowerShell penceresinde ya da `Start-Process` ile arka plan
 uv run tcdata automation status <output-root> --config configs/provider-smoke.toml
 ```
 
+### Kredi/kota sonrası seçici recovery
+
+Kredi veya kota bittiğinde normal koşu bitmiş satırı yeniden göndermez. Bu kasıtlıdır:
+bilinmeyen teslimatın kör tekrarında çift ücret veya iki farklı model sonucu doğabilir.
+Kredi yenilendikten sonra yalnız açıkça seçilen HTTP `402` (payment required) ve/veya
+`429` (rate/quota) sonuçlarını, eski köke hiç yazmadan yeni bir kardeş kökte yeniden
+çalıştırmak için `automation recover` kullanılır. Başarılı eski çeviri ve judge
+checkpoint'leri provider'a tekrar gitmez; recovery, bunları hash referanslarıyla yeni
+effective overlay ve yeni HF review paketi içinde birleştirir.
+
+```powershell
+$parent = "artifacts/automation/production-1000-20260813"
+$recovery = "artifacts/automation/production-1000-20260813-recovery-20260814"
+
+uv run tcdata automation recover-plan $parent --retry-http-status 429
+
+uv run tcdata automation recover $parent `
+  --output $recovery --config configs/provider-smoke.toml `
+  --retry-http-status 429 --approve-paid-retry `
+  --strong-pass-sample-percent 2 --live
+```
+
+Bu örnekteki 13 Ağustos koşusunun OpenAI attempt kayıtları `429` idi. `402` de
+görülürse ayrıca `--retry-http-status 402` eklenir. Preflight, doğrulama, kalıcı
+4xx ve belirsiz ağ teslimatı kayıtları seçilemez; bunlar insan/operatör incelemesi
+gerektirir. Recovery kökü mevcut olmamalı ve parent kökün altına yerleştirilmemelidir.
+`recover-plan` yalnız parent'taki mevcut seçilebilir kayıtları sayar; geri kazanılan
+mini kararları ve yeni çeviriler güçlü-judge seçimini yeniden hesapladığından nihai
+güçlü çağrı sayısı plan satırından farklı olabilir.
+
 Eski immutable artifact'ler silinmez. Yeni bir ana üretim koşusu için yeni, boş ve tarih/run-id içeren bir output kökü seçilir; yalnız yarıda kalan **aynı** koşu aynı kökle devam ettirilir. Bu ayrım, tekrar egress'i ve kanıt karışmasını engeller.
 
 İkinci ve sonraki üretim batch'leri aynı adayları yeniden seçmemelidir. Yeni output köküyle beraber `--candidate-offset` değerini önceki aday sayısı kadar artırın; örneğin ilk 1000 aday için `0`, sonraki 1000 aday için `1000`. Offset immutable candidate manifestine yazılır ve kaynaklar değiştirilmez.
