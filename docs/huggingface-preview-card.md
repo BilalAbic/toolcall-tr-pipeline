@@ -104,20 +104,7 @@ Technical fields are preserved rather than rewritten by the translation model.
 
 This derivative preview keeps the CC-BY-4.0 attribution requirements of the
 upstream dataset cards. If you use records originating from either source,
-please cite the corresponding upstream work as well as this preview.
-
-### Cite this preview
-
-```bibtex
-@dataset{abic_2026_turkish_tool_calling_quality_gated_preview,
-  author = {Abic, Bilal},
-  title = {Turkish Tool-Calling Quality-Gated Preview},
-  year = {2026},
-  publisher = {Hugging Face},
-  url = {https://huggingface.co/datasets/bilalabic/turkish-tool-calling-quality-gated-preview},
-  note = {Quality-gated preview with limited six-record manual spot-check}
-}
-```
+please cite the corresponding upstream work.
 
 ### Cite Salesforce xLAM / APIGen
 
@@ -144,6 +131,16 @@ please cite the corresponding upstream work as well as this preview.
   pages = {3391--3409}
 }
 ```
+
+## Optional standalone conversation export
+
+`data/train.jsonl` is the canonical, provenance-preserving preview format.
+Consumers who need only the compact `conversation` JSON array can use the
+[standalone exporter](https://github.com/BilalAbic/toolcall-tr-pipeline/tree/main/standalone_tools).
+It reads a local JSONL copy and writes a separate file without changing the
+source data or invoking a model/API. The simplified export deliberately omits
+IDs and quality/provenance metadata, so it should not replace the canonical
+JSONL for auditing or release work.
 
 ## Limitations and responsible use
 
