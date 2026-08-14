@@ -18,6 +18,10 @@ configs:
   data_files:
   - split: train
     path: data/train.jsonl
+- config_name: conversation_only
+  data_files:
+  - split: train
+    path: conversations/train.json
 ---
 
 # Turkish Tool-Calling Quality-Gated Preview
@@ -134,13 +138,34 @@ please cite the corresponding upstream work.
 
 ## Optional standalone conversation export
 
-`data/train.jsonl` is the canonical, provenance-preserving preview format.
-Consumers who need only the compact `conversation` JSON array can use the
+A companion [conversation-only split](https://huggingface.co/datasets/bilalabic/turkish-tool-calling-quality-gated-preview/viewer/conversation_only/train)
+is published for consumers who need a compact conversation-only export. It is
+a UTF-8 JSON array whose entries use exactly this shape:
+
+```json
+[
+  {
+    "conversation": [
+      {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "thinking": null,
+        "tool_calls": null,
+        "images": null
+      }
+    ]
+  }
+]
+```
+
+The file is produced by the
 [standalone exporter](https://github.com/BilalAbic/toolcall-tr-pipeline/tree/main/standalone_tools).
 It reads a local JSONL copy and writes a separate file without changing the
-source data or invoking a model/API. The simplified export deliberately omits
-IDs and quality/provenance metadata, so it should not replace the canonical
-JSONL for auditing or release work.
+source data or invoking a model/API. `data/train.jsonl` remains the canonical,
+provenance-preserving format. The simplified export deliberately omits IDs and
+quality/provenance metadata, so it must not replace the canonical JSONL for
+auditing or release work.
 
 ## Limitations and responsible use
 
