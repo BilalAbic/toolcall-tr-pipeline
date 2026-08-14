@@ -8,6 +8,26 @@ Kod deposu: [BilalAbic/toolcall-tr-pipeline](https://github.com/BilalAbic/toolca
 
 Faz 1–5 veri hattı, fail-closed canlı çeviri/judge yüzeyleri ve bounded otomasyon katmanı uygulanmıştır. `pilot run`, kaynağı değiştirmeden snapshot → ingest → canonical → audit zincirini yürütür; `automation run` conflict-free adayları seçer, çevirir, önce mini judge ile değerlendirir ve yalnız non-pass ile deterministik denetim örneklemini güçlü judge’a yükseltir. İnsan onayı bekleyen Hugging Face JSONL paketi üretir; her Gold/release kaydı açık insan kabuluna bağlıdır.
 
+Bu çıktı için en doğru kısa niteleme **quality-gated**’dır: kayıtlar sürüm-sabitli kaynak alma, teknik-yapı koruması, çeviri, host-side doğrulama ve çok aşamalı model kalite kapılarından geçer. Bu ifade, nihai yayın kabulünün hâlâ insan yetkisinde olduğunu doğru biçimde korur; bu nedenle `human-verified` veya `gold` denmez.
+
+```mermaid
+flowchart LR
+    A["Sürüm-sabitli kaynaklar"] --> B["Snapshot · ingest · canonicalize"]
+    B --> C["Dedup / conflict audit\npolicy-covered aday seçimi"]
+    C --> D["DeepSeek Flash\nbirincil çeviri"]
+    D -->|"uygun güvenli hata"| E["DeepSeek Pro\ntek fallback"]
+    D --> F["Host merge + yapı doğrulaması"]
+    E --> F
+    F --> G["OpenAI mini\nkalite değerlendirmesi"]
+    G -->|"pass, örneklem dışında"| J["Quality-gated\nHF review JSONL"]
+    G -->|"non-pass veya deterministik örneklem"| H["OpenAI strong\nyükseltilmiş değerlendirme"]
+    H -->|"pass"| J
+    H -->|"non-pass / ulaşılamıyor"| I["Kanıtla hariç tutulur\nveya seçici recovery kuyruğu"]
+    J --> K["İnsan onayı"]
+    K -->|"onay"| L["Hugging Face yayını"]
+    K -->|"ret / düzeltme"| M["Review / remediation"]
+```
+
 | Alan | Mevcut durum |
 |---|---|
 | Kaynak pilotları | When2Call ve xLAM 60k revision-pinned, modelsiz işlendi. |
@@ -15,6 +35,7 @@ Faz 1–5 veri hattı, fail-closed canlı çeviri/judge yüzeyleri ve bounded ot
 | İnsan review kuyruğu | 2.983 açık görev yayımlandı: 2.841 canonical karantina ve 142 unresolved conflict. |
 | Pre-review canlı canary | When2Call'dan 3 conflict-free episode / 20 leaf çevrildi; mini judge 20/20 `pass`, 0 finding. |
 | Otomatik canlı 50’lik koşu | Doğrulanmış `prompt-0.3.0` + Flash 6 worker regresyonunda 50 adaydan 46’sı çevrildi; 547 leaf’in 541’i kabul edildi ve 40 satırlık HF review paketi oluştu. Tahmini maliyet $0.556529. v0.4 deneyi bunu geçemediği için üretimde kapalıdır. |
+| Otomatik canlı 1.000’lik recovery koşusu | 1.000 adaydan 733’ü quality-gated HF review paketine girdi; 267 kayıt ayrı inceleme/iyileştirme kanıtıyla tutuldu. Paket `pending_human_approval` ve `publish_allowed=false` durumundadır. |
 | İnsan review / Gold | Model ve deterministik kontrollerden sonra son kabul kapısı; pre-review canary Gold/S400/release üretmez. |
 
 ## Tasarım referansları

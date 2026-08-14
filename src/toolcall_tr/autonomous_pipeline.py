@@ -1568,28 +1568,73 @@ def _hf_row(episode: CanonicalEpisode) -> HierarchicalHuggingFaceDatasetRow:
     )
 
 
+def _source_card_entry(namespace: str) -> str:
+    if namespace == "Salesforce-xlam-function-calling-60k":
+        return (
+            "- [Salesforce xLAM function-calling 60k]"
+            "(https://huggingface.co/datasets/"
+            "Salesforce/xlam-function-calling-60k); revision "
+            "`26d14ebfe18b1f7b524bd39b404b50af5dc97866`, CC-BY-4.0."
+        )
+    if namespace in {"nvidia-When2Call", "nvidia/When2Call"}:
+        return (
+            "- [NVIDIA When2Call]"
+            "(https://huggingface.co/datasets/nvidia/When2Call); revision "
+            "`0582f7749df63a96fdc3070932e83e72396ace53`, CC-BY-4.0."
+        )
+    return f"- `{namespace}`; source snapshot IDs are retained per row."
+
+
 def _dataset_card(*, package: HuggingFaceReviewPackage, namespaces: list[str]) -> bytes:
-    sources = "\n".join(f"- `{name}`" for name in namespaces)
+    source_entries = {_source_card_entry(name) for name in namespaces}
+    sources = "\n".join(sorted(source_entries))
     text = (
         "---\n"
+        "pretty_name: Turkish Tool-Calling Quality-Gated\n"
         "language:\n- tr\n"
         "license: cc-by-4.0\n"
         "task_categories:\n- text-generation\n"
+        "tags:\n- tool-calling\n- function-calling\n- quality-gated\n"
+        "- silver-candidate\n- pending-human-approval\n"
         "configs:\n"
         "- config_name: default\n"
         "  data_files:\n"
         "  - split: train\n"
         "    path: data/train.jsonl\n"
         "---\n\n"
-        "# Turkish Tool Calling review candidate\n\n"
-        "This package is a local, quality-evaluated silver candidate and remains "
-        "pending explicit human approval. It must not be published as Gold without "
-        "that approval.\n\n"
+        "# Turkish Tool-Calling Quality-Gated\n\n"
+        "> **Pre-release status:** This is a quality-gated silver candidate. Human "
+        "approval is required before a Gold claim or public dataset release.\n\n"
+        "## Quality gates\n\n"
+        "1. Revision-pinned source snapshot, ingest, canonicalization and conflict audit.\n"
+        "2. Host-owned preservation of tool names, arguments, schemas and call structure.\n"
+        "3. DeepSeek Flash translation with one safe DeepSeek Pro fallback.\n"
+        "4. OpenAI mini quality evaluation; non-passes and a deterministic pass sample "
+        "escalate to the strong judge.\n"
+        "5. Strict JSONL/schema validation, content hashes and immutable manifests.\n\n"
+        "`quality-gated` does not mean `human-verified` or `Gold`.\n\n"
+        "## Dataset composition\n\n"
         f"- Review-ready records: {package.review_ready_records}\n"
         f"- Records retained for review: {package.needs_review_records}\n"
-        f"- Package ID: `{package.package_id}`\n\n"
-        "## Upstream sources\n\n"
-        f"{sources}\n"
+        "- Split: `train`\n"
+        "- Format: JSONL with `id`, `messages`, `tools`, source provenance, quality "
+        "tier and consensus status.\n"
+        f"- Package ID: `{package.package_id}`\n"
+        f"- `data/train.jsonl` SHA-256: `{package.train_jsonl_sha256}`\n\n"
+        "## Source provenance and attribution\n\n"
+        f"{sources}\n\n"
+        "Every row retains `source_dataset_namespace` and `source_snapshot_ids`; "
+        "technical fields are preserved rather than translated by the model.\n\n"
+        "## Limitations and responsible use\n\n"
+        "- This package is a review candidate, not a final public release.\n"
+        "- Source-derived content can contain contact-like or credential-related "
+        "phrases; no PII-free claim is made and explicit human review remains required.\n"
+        "- This batch contains single-turn `user -> assistant` conversations only; "
+        "multi-turn coverage requires a later, separately reviewed batch.\n\n"
+        "## Reproducibility\n\n"
+        "The pipeline, validation contracts and release process are documented in "
+        "[BilalAbic/toolcall-tr-pipeline]"
+        "(https://github.com/BilalAbic/toolcall-tr-pipeline).\n"
     )
     return text.encode("utf-8")
 

@@ -385,9 +385,13 @@ def test_automation_falls_back_without_stopping_and_builds_review_ready_hf_jsonl
     assert package.review_ready_records == len(episodes)
     assert package.status == "pending_human_approval"
     assert next(iter(iter_jsonl(train_path)))["quality_tier"] == "silver_candidate"  # type: ignore[index]
-    assert "data/train.jsonl" in (
+    card = (
         tmp_path / "hf-package" / package.package_id / "README.md"
     ).read_text(encoding="utf-8")
+    assert "data/train.jsonl" in card
+    assert "quality-gated" in card
+    assert "source snapshot IDs are retained per row" in card
+    assert "Human approval is required" in card
 
 
 def test_automation_does_not_resend_after_unknown_delivery_and_continues(tmp_path: Path) -> None:
